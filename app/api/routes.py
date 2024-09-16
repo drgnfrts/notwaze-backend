@@ -35,14 +35,16 @@ async def collect_user_data(request: Request, user_data: dict):
     """
     try:
         # Convert Point to a JSON-serializable format (e.g., tuple)
-        user_location = (103.84959994451148, 1.2973812128576168)
+        # user_location = (103.84959994451148, 1.2973812128576168)
+        # end_loc = (1.29469651737808, 103.813299661497)
 
         # Store user data in app state with JSON-serializable format
         request.app.state.user_data = {
-            "user_location": user_location,
-            "search_radius": 1000,
+            "user_location": user_data["user_location"],
+            "end_location": user_data["end_location"],
+            "search_radius": user_data["search_radius"],
             "num_POIs": 5,
-            "max_route_length": 2000
+            "max_route_length": user_data["max_route_length"]
         }
 
         # Return the stored user data
