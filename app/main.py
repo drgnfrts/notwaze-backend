@@ -11,12 +11,14 @@ async def lifespan(app: FastAPI):
     print("Loading GeoJSON files from S3...")
     app.state.geojson_files = load_all_geojson_files()
     print("GeoJSON files loaded into memory.")
+    app.state.user_data = {} 
     yield
     # This code runs when the application is shutting down
     print("Application is shutting down")
     
     # Purge the app state
     app.state.geojson_files.clear()
+    app.state.user_data.clear()
     print("GeoJSON files cleared from memory.")
 
 # Initialize the FastAPI app with the lifespan context manager
