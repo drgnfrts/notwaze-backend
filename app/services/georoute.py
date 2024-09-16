@@ -1,56 +1,32 @@
-"""# Install Packages using PIP Resource Manager"""
-
-"""# Import data and packages"""
-
 import geopandas as gpd
 import pandas as pd
-from bs4 import BeautifulSoup
 from shapely.geometry import LineString, Point, Polygon, MultiLineString
 from shapely.ops import unary_union
+from dotenv import load_dotenv
 import folium
 import polyline
 import requests
-import random
 from sklearn.cluster import KMeans
+from fastapi import HTTPException, Request
 
-from google.colab import drive
-drive.mount('/content/drive')
+# Load environment variables from .env file
+load_dotenv()
 
-pd.set_option('display.max_colwidth', None)
+def generate_route(request: Request):
+   geojsons = request.app.state.geojson
+   user_data = request.app.state.user_data
+   user_gdf = gpd.GeoDataFrame([{'geometry': Point(user_data['user_location'])}], crs="EPSG:4326")
+   pass
 
-museum_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_Museum.geojson')
-monument_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_Monument.geojson')
-historicSite_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_HistoricSite.geojson')
-park_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_Park.geojson')
-toilet_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_Toilet.geojson')
-drinkingWater_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_DrinkingWater.geojson')
-stairs_gdf = gpd.read_file('/content/drive/My Drive/Colab Notebooks/data/data_cleaned/cleaned_Stairs.geojson')
-stairs_gdf = stairs_gdf[stairs_gdf.geometry.type != 'Point']
+def concat_poi_gdf(file_keys: list):
+   for key in file_keys:
+      # logic to seperate into poi types
 
-"""# User Input"""
-
-# # Location of IRAS, Novena
-# longitude = 103.84225837306487
-# latitude = 1.3195883289088046
-
-# Location of SCIS1
-longitude = 103.84959994451148
-latitude = 1.2973812128576168
-
-# User POI Search Radius (User Input)
-search_radius = 1000 # in metres
-
-# User Number of POIs Searched (User Input)
-num_POIs = 5
-
-# Max total distance
-max_route_length = 2000 # in metres
-
-# Convert input into shapely object
-user_location = Point((longitude, latitude))
+    # logic to concat the poi files
+      
 
 # Convert user location to a GeoDataFrame
-user_gdf = gpd.GeoDataFrame([{'geometry': user_location}], crs="EPSG:4326")
+
 user_gdf['NAME'] = 'User'
 user_gdf['TYPE'] = 'User'
 

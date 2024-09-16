@@ -22,7 +22,7 @@ async def list_geojson_files(request: Request):
     return {"files": list(request.app.state.geojson_files.keys())}
 
 @router.get("/geojson/{file_key}")
-async def get_geojson_route(file_key: str, request: Request):
+async def get_geojson_file(file_key: str, request: Request):
     """
     Endpoint to get a specific GeoJSON file by its key.
     """
