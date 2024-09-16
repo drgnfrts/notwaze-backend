@@ -36,5 +36,5 @@ ENV PATH="/root/.local/bin:$PATH"
 # Expose the port
 EXPOSE 8000
 
-# Run Uvicorn from the installed location
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run Uvicorn with the correct module path
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

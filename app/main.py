@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import router  # Import the unified API router
 from app.services import load_all_geojson_files
-# 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager

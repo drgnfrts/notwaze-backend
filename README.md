@@ -48,6 +48,13 @@ poetry shell
 uvicorn app.main:app --reload
 ```
 
+Alternatively, build the container and run with Docker Compose:
+
+```bash
+docker-compose build
+docker-compose up
+```
+
 The app will be accessible at http://127.0.0.1:8000
 
 ## API Endpoints
