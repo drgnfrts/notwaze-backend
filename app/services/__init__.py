@@ -3,6 +3,7 @@
 # from .geo_service import GeoDataLoader, GeoAnalyzer, RouteGenerator
 # from .llm_service import LLMService
 from .s3_service import load_all_geojson_files, fetch_geojson_from_s3, get_geojson
+from .route_service import generate_route
 
 __all__ = [
     # "GeoDataLoader",
@@ -12,4 +13,5 @@ __all__ = [
     "load_all_geojson_files",
     "fetch_geojson_from_s3",
     "get_geojson",
+    "generate_route"
 ]
