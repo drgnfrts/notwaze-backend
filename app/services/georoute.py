@@ -159,8 +159,8 @@ def concat_poi_gdf(file_keys: list):
 
 
 
-###############################################
-###############################################
+# ##############################################
+# ##############################################
 # """# Route Generation
 
 # # ## Functions to Generate Routes
@@ -536,8 +536,8 @@ def concat_poi_gdf(file_keys: list):
 
 
 
-###############################################
-###############################################
+# ##############################################
+# ##############################################
 # """# Export"""
 
 # # Remove the last row from final_route_points_gdf
@@ -565,8 +565,8 @@ def concat_poi_gdf(file_keys: list):
 
 
 
-###############################################
-###############################################
+# ##############################################
+# ##############################################
 # """# Import"""
 
 # # Function to read and set CRS for a GeoJSON file
@@ -592,10 +592,14 @@ def concat_poi_gdf(file_keys: list):
 # user_gdf = final_route_points_gdf.iloc[[0]]
 # end_gdf = final_route_points_gdf.iloc[[-1]]
 
+# # Extract POI and Amenity Points
+# final_route_points_gdf = final_route_points_gdf.iloc[1:-1]
 
+# # Convert final_route_gdf to a list of LineStrings
+# final_route = final_route_gdf.geometry.tolist()
 
-###############################################
-###############################################
+# ##############################################
+# ##############################################
 # """# Show Full Map
 
 # ### Define Functions and Variables for Mapping
@@ -694,7 +698,7 @@ def concat_poi_gdf(file_keys: list):
 #     )
 
 # # Add buffer to the map
-# folium.GeoJson(search_buffer.to_crs(epsg=4326).geometry,
+# folium.GeoJson(search_buffer_gdf.geometry,
 #                style_function=lambda x: {
 #                    'fillOpacity': 0.1       # Set fill opacity to 10%
 #                 }
@@ -702,7 +706,7 @@ def concat_poi_gdf(file_keys: list):
 
 # # Add locactions of stairs in red
 # folium.GeoJson(
-#     near_avoidance.to_crs(epsg=4326).geometry,
+#     avoidance_buffer_gdf.geometry,
 #     style_function=lambda x: {'color': 'magenta'},
 #     tooltip='Stairs'
 #     ).add_to(m)
@@ -723,14 +727,10 @@ def concat_poi_gdf(file_keys: list):
 # ).add_to(m)
 
 # # Add POIs to the map
-# add_markers(final_selected_pois)
-
-# # Add POIs to the map
-# if len(final_selected_amenities) != 0:
-#   add_markers(final_selected_amenities)
+# add_markers(final_route_points_gdf)
 
 # # Add routes to the map
-# add_route_lines(final_route_geometries)
+# add_route_lines(final_route)
 
 # # Display the map
 # m
