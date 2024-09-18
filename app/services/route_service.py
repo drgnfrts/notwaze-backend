@@ -7,13 +7,13 @@ from shapely.geometry import Point, LineString
 #     generate_avoidance_zones,
 #     concat_poi_gdf
 # )
-# from app.utils.route_generation import (
-#     nearest_neighbor_route,
+from app.utils.route_generation import nearest_neighbor_route, generate_full_route
 #     generate_full_route,
 #     check_intersections
 # )
 from app.models.schemas import UserData
-from app.utils.data_prep import concat_poi_gdf, generate_search_buffer, search_nearby_items
+from app.utils.data_prep import concat_poi_gdf, generate_search_buffer, search_nearby_items, find_clusters
+import time
 
 def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     """
@@ -24,8 +24,10 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     Returns:
 
     """
+    MAX_TIME = 60
 
     # Convert user and end locations to GeoDataFrames
+    start_time = time.time()
     user_location = Point(tuple(user_data['user_location']))  # Reverse to (lon, lat)
     end_location = Point(tuple(user_data['end_location']))
     user_gdf = gpd.GeoDataFrame(
@@ -44,7 +46,7 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     else:
         activity_line = user_gdf
 
-    activity_gdf_sg, search_gdf_sg = generate_search_buffer(activity_line, user_data['search_radius'])
+    search_gdf_sg = generate_search_buffer(activity_line, user_data['search_radius'])
 
     print("we reach line 47")
 
@@ -59,18 +61,36 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     poi_gdf, amenity_gdf, avoidance_gdf = (
         concat_poi_gdf(keys, request) for keys in input_data_keys.values())
     
-    nearby_pois = search_nearby_items(activity_gdf_sg, search_gdf_sg, poi_gdf, False) if poi_gdf is not None else None
-    nearby_amenity = search_nearby_items(activity_gdf_sg, search_gdf_sg, amenity_gdf, False) if amenity_gdf is not None else None
-    nearby_avoidance_buffer = search_nearby_items(activity_gdf_sg, search_gdf_sg, avoidance_gdf, True) if avoidance_gdf is not None else None
+    print(poi_gdf.crs, amenity_gdf.crs, avoidance_gdf.crs)
+    
+    nearby_pois = search_nearby_items(search_gdf_sg, poi_gdf, False) if poi_gdf is not None else None
+    nearby_amenity = search_nearby_items(search_gdf_sg, amenity_gdf, False) if amenity_gdf is not None else None
+    nearby_avoidance_buffer = search_nearby_items(search_gdf_sg, avoidance_gdf, True) if avoidance_gdf is not None else None
 
     print(nearby_pois, nearby_amenity, nearby_avoidance_buffer)
 
-    # # Find clusters and select POIs
-    # selected_pois, near_pois_filter = find_clusters(near_pois, user_data.num_POIs)
+    while True:
+        print("Started route generation attempt")
+        if time.time() - start_time > MAX_TIME:
+            print("Maximum attempts reached. Unable to find a valid route that satisfies the requirements.")
+            return None, None, None, None, None, None
 
-    # # Generate route points
-    # route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois)
-    # route_points_gdf = route_points_gdf.append(end_gdf, ignore_index=True)
+
+        # Find clusters and select POIs
+        selected_pois = find_clusters(nearby_pois, user_data['num_POIs'])
+        # Generate route points
+        print(user_gdf, selected_pois, end_gdf)
+        route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois, end_gdf)
+
+        print(route_points_gdf)
+        print(route_points_gdf.columns)
+
+        final_gdf, metadata = generate_full_route(user_data, route_points_gdf, nearby_pois, nearby_amenity, nearby_avoidance_buffer)
+        if final_gdf is not None:
+            break
+    
+    print(final_gdf)
+
 
     # # Generate the route
     # final_route_points_gdf, final_route_geometries, total_time, total_distance, final_selected_amenities = generate_full_route(
