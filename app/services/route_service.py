@@ -53,7 +53,7 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     # Prepare the keys to pull from memory and concat together
     input_data_keys = {
         'poi_gdf': [f"{poi_type}.geojson" for poi_type in user_data['poi_types']] if user_data['poi_types'] else [],
-        'amenity_gdf': [f"{amenity_type}.geojson" for amenity_type in user_data['amenity_types']] if user_data['amenity_types'] else None,
+        'amenity_gdf': ['toilet.geojson'] if user_data['amenity'] else None,
         'avoidance_gdf': ['stairs.geojson'] if user_data['barrier_free'] else None
     }
 

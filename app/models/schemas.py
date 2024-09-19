@@ -8,7 +8,7 @@ class UserData(BaseModel):
     num_POIs: int
     max_route_length: int
     poi_types: List[str]
-    amenity_types: List[str]
+    amenity: bool
     barrier_free: bool
 
 class RouteRequest(BaseModel):

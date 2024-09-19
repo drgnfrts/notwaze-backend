@@ -41,7 +41,7 @@ async def collect_user_data(request: Request, user_data: dict):
         #     "max_route_length": 3000,
         #     # below are placeholder values
         #     "poi_types": ['monument', 'historicSite', 'park', 'museum'],
-        #     "amenity_types": ['toilet'],
+        #     "amenity": True,
         #     "barrier_free": True
         # }
 
@@ -55,8 +55,8 @@ async def collect_user_data(request: Request, user_data: dict):
             "max_route_length": user_data["max_route_length"],
             # below are placeholder values
             "poi_types": ['monument', 'historicSite', 'park', 'museum'],
-            "amenity_types": ['toilet'],
-            "barrier_free": True
+            "amenity": user_data['amenity'], #True
+            "barrier_free": user_data['barrier_free'] #True
         }
 
         # Return the stored user data

@@ -160,8 +160,8 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
 
         # Add an amenity if the distance between points is too long
         # Does not yet check if there is a barrier free route to amenity
-        if latest_distance >= CUT_OFF and (next_point != end_point):
-            inserted_amenity, amenity_distance = find_nearest_amenity(current_point_gdf, nearby_amenities_gdf)
+        if user_data['amenity'] and latest_distance >= CUT_OFF and (next_point != end_point):
+            inserted_amenity, _ = find_nearest_amenity(current_point_gdf, nearby_amenities_gdf)
             route_geometry_to_amenity, time_to_amenity, distance_to_amenity = get_route_OneMapAPI(current_point, inserted_amenity.geometry)
             route_geometry_after_amenity, time_after_amenity, distance_from_amenity = get_route_OneMapAPI(inserted_amenity.geometry, next_point)
 
