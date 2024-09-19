@@ -11,7 +11,7 @@ from app.utils.route_generation import nearest_neighbor_route, generate_full_rou
 #     generate_full_route,
 #     check_intersections
 # )
-from app.models.schemas import UserData
+from app.models.schemas import UserData, RoutePoint, RouteSegment, RouteResponse
 from app.utils.data_prep import concat_poi_gdf, generate_search_buffer, search_nearby_items, find_clusters
 import time
 
@@ -69,6 +69,7 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
 
     print(nearby_pois, nearby_amenity, nearby_avoidance_buffer)
 
+    final_gdf = None
     while True:
         print("Started route generation attempt")
         if time.time() - start_time > MAX_TIME:
@@ -90,39 +91,39 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
             break
     
     print(final_gdf)
+    print(metadata)
 
 
-    # # Generate the route
-    # final_route_points_gdf, final_route_geometries, total_time, total_distance, final_selected_amenities = generate_full_route(
-    #     route_points_gdf, user_data.max_route_length, near_amenities, avoidance_buffer_gdf
-    # )
 
-    # # Prepare the response
-    # if final_route_points_gdf is None:
-    #     raise Exception("No valid route found within the given constraints.")
+    # Prepare the response
+    if final_gdf is None:
+        raise Exception("No valid route found within the given constraints.")
 
-    # route_points = [
-    #     RoutePoint(
-    #         name=row['NAME'],
-    #         type=row['TYPE'],
-    #         latitude=row.geometry.y,
-    #         longitude=row.geometry.x
-    #     ) for idx, row in final_route_points_gdf.iterrows()
-    # ]
+    route_points = [
+        RoutePoint(
+            name=row['NAME'],
+            type=row['TYPE'],
+            latitude=row.geometry.y,
+            longitude=row.geometry.x
+        ) for idx, row in final_gdf.iterrows()
+    ]
 
-    # route_segments = []
-    # for i, geom in enumerate(final_route_geometries):
-    #     route_segments.append(
-    #         RouteSegment(
-    #             from_point=route_points[i],
-    #             to_point=route_points[i+1],
-    #             geometry=[(lat, lon) for lon, lat in geom.coords]
-    #         )
-    #     )
+    final_route_geometries = metadata['final_route_geometry']
+    route_segments = []
+    for i, geom in enumerate(final_route_geometries):
+        # Ensure you only create segments if there are enough route points
+        if i < len(route_points) - 1:
+            route_segments.append(
+                RouteSegment(
+                    from_point=route_points[i],
+                    to_point=route_points[i + 1],
+                    geometry=[(lat, lon) for lon, lat in geom.coords]  # Extracting coordinates as (lat, lon)
+                )
+            )
 
-    # return RouteResponse(
-    #     total_distance=total_distance,
-    #     total_time=total_time,
-    #     route_points=route_points,
-    #     route_segments=route_segments
-    # )
+    return RouteResponse(
+        total_distance=metadata['total_distance'],
+        total_time=metadata['total_time'],
+        route_points=route_points,
+        route_segments=route_segments
+    )

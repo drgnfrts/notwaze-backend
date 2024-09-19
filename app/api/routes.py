@@ -72,6 +72,6 @@ async def generate_route_endpoint(request: Request):
 
         # Pass necessary data to the service function
         route_response = generate_route(request, user_data_state)
-        #return route_response
+        return route_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
