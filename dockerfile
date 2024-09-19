@@ -37,4 +37,4 @@ ENV PATH="/root/.local/bin:$PATH"
 EXPOSE 8000
 
 # Run Uvicorn with the correct module path
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

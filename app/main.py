@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import router  # Import the unified API router
 from app.services import load_all_geojson_files
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,10 +27,18 @@ async def lifespan(app: FastAPI):
 
 # Initialize the FastAPI app with the lifespan context manager
 app = FastAPI(
-    title="FastAPI Backend for LLM and Geospatial Processing",
-    description="A backend service with real-time WebSocket streaming, S3 integration, and external LLM API integration",
+    title="FastAPI Backend for Walk-Eaze",
+    description="A backend service with enabling routing to points of interest in Singapore",
     version="1.0.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,  # Or restrict to specific IPs or domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(router)

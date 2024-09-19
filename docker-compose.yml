@@ -1,13 +1,13 @@
-version: "3.8"
 services:
   fastapi-app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "80:8000"
     volumes:
       - .:/app  # Mount the current directory into /app in the container
+    image: 533267362844.dkr.ecr.us-east-1.amazonaws.com/walk-eaze/backend:1.0.0
     command:
       [
         "python",
@@ -18,5 +18,7 @@ services:
         "0.0.0.0",
         "--port",
         "8000",
-        "--reload"
       ]
+    restart: always
+    env_file:
+      - ${ENV_FILE}
