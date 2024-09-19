@@ -3,11 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: 533267362844.dkr.ecr.us-east-1.amazonaws.com/walk-eaze-backend:1.0.1
     ports:
       - "80:8000"
     volumes:
-      - .:/app  # Mount the current directory into /app in the container
-    image: 533267362844.dkr.ecr.us-east-1.amazonaws.com/walk-eaze/backend:1.0.0
+      - .:/app  # Mount the current directory into /app in the container  
     command:
       [
         "python",
@@ -21,4 +21,4 @@ services:
       ]
     restart: always
     env_file:
-      - ${ENV_FILE}
+      - .env.production

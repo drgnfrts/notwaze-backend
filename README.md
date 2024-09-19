@@ -5,9 +5,11 @@ This project is a backend service built for Walk-Eaze with **FastAPI** that aims
 
 ## Features
 
-More to come soon!
-
 - **S3 Integration**: Load and manage GeoJSON files directly from Amazon S3.
+- **Routing Service**: Input your start and end points, how far you want to talk, how many things you want to see, and let our routing service do its magic!
+    - Selection of points closer to your start and end points, ordered using the nearest neighbours heuristic
+    - Routing with OneMap API
+    - Possible to generate barrier-free routes, with some success
 
 
 ## Setup and Installation
@@ -48,7 +50,7 @@ poetry shell
 uvicorn app.main:app --reload
 ```
 
-Alternatively, build the container and run with Docker Compose:
+Alternatively, build the container and run (locally) with Docker Compose:
 
 ```bash
 docker-compose build

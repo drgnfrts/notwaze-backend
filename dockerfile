@@ -28,7 +28,7 @@ WORKDIR /app
 # Copy the installed dependencies from the build stage
 COPY --from=build /usr/local /usr/local
 COPY --from=build /root/.local /root/.local
-COPY --from=build /app /app
+COPY . /app
 
 # Add the Poetry and Python installation paths to the PATH environment variable
 ENV PATH="/root/.local/bin:$PATH"

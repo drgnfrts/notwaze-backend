@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,7 +34,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # Or restrict to specific IPs or domains
+    allow_origins=["*"],  # Or restrict to specific IPs or domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

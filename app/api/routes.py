@@ -31,21 +31,22 @@ async def collect_user_data(request: Request, user_data: dict):
     """
     Endpoint to collect and store user-specific data in the application state.
     """
-    # try:
-    #     # Convert Point to a JSON-serializable format (e.g., tuple)
-    #     request.app.state.user_data = {
-    #         "user_location": [103.84959994451148, 1.2973812128576168],
-    #         "end_location": [103.84509297803696, 1.2888419050771158],
-    #         "search_radius": 500,
-    #         "num_POIs": 5,
-    #         "max_route_length": 3000,
-    #         # below are placeholder values
-    #         "poi_types": ['monument', 'historicSite', 'park', 'museum'],
-    #         "amenity_types": ['toilet'],
-    #         "barrier_free": True
-    #     }
     try:
+        # Convert Point to a JSON-serializable format (e.g., tuple)
+        # request.app.state.user_data = {
+        #     "user_location": [103.84959994451148, 1.2973812128576168],
+        #     "end_location": [103.84509297803696, 1.2888419050771158],
+        #     "search_radius": 500,
+        #     "num_POIs": 5,
+        #     "max_route_length": 3000,
+        #     # below are placeholder values
+        #     "poi_types": ['monument', 'historicSite', 'park', 'museum'],
+        #     "amenity_types": ['toilet'],
+        #     "barrier_free": True
+        # }
+
         # Store user data in app state with JSON-serializable format
+
         request.app.state.user_data = {
             "user_location": user_data["user_location"],
             "end_location": user_data["end_location"],
