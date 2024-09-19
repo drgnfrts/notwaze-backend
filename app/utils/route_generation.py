@@ -219,8 +219,8 @@ def handle_backtrack(metadata: dict, end_point_gdf: GeoDataFrame, max_route_leng
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()
 
-        last_point = metadata['final_points_gdf_list'][-1]['geometry']
-        end_point = end_point_gdf['geometry']
+        last_point = metadata['final_points_gdf_list'][-1]['geometry'].values[0]
+        end_point = end_point_gdf['geometry'].values[0]
         print("------")
         print(last_point)
         print(end_point)
