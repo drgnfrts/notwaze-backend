@@ -130,6 +130,8 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
 
     end_point_gdf = route_points_gdf.iloc[[-1]]
     end_point = end_point_gdf.geometry.iloc[0]
+    print(f"END POINT")
+    print(end_point)
     
     while i < len(route_points_gdf) - 1:
 
@@ -219,10 +221,12 @@ def handle_backtrack(metadata: dict, end_point_gdf: GeoDataFrame, max_route_leng
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()
 
-        last_point = metadata['final_points_gdf_list'][-1]['geometry'].values[0]
-        end_point = end_point_gdf['geometry'].values[0]
+        last_point = metadata['final_points_gdf_list'][-1].geometry.iloc[0]
+        end_point = end_point_gdf.geometry.iloc[0]
         print("------")
+        print(f"last_point - {type(last_point)}")
         print(last_point)
+        print(f"end_point - {type(last_point)}")
         print(end_point)
 
         route_geometry_to_end, time_to_end, distance_to_end = get_route_OneMapAPI(last_point, end_point)

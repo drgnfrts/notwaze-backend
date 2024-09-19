@@ -97,501 +97,501 @@ load_dotenv()
 
 
 
-"""# Data Preparation
+# """# Data Preparation
 
-## Functions For Data Preparation
-"""
-
-def search_nearby_items(activity_line, search_buffer_gdf, item_gdf):
-  # Returns a GeoDataFrame of items within search_buffer
-
-  # Find intersection
-  intersecting_item_gdf = gpd.sjoin(item_gdf, search_buffer_gdf, how='inner', predicate='intersects')
-  intersecting_item_gdf.drop(columns=['index_right'], inplace=True)
-
-  return intersecting_item_gdf
-
-def find_clusters(item_gdf, num_clusters):
-
-  # return original GeoDataFrame if number of items <= number of clusters set by user
-  if len(item_gdf) <= num_clusters:
-    item_gdf['cluster'] = 1 # set all items into same cluster
-    return item_gdf
-
-  # Perform K means clustering using coordinates
-  coords = item_gdf.geometry.apply(lambda geom: [geom.x, geom.y]).tolist()
-  kmeans = KMeans(n_clusters=num_clusters, n_init=10).fit(coords)
-  item_gdf['cluster'] = kmeans.labels_
-
-  # Randomly select one POI from each cluster
-  selected_items = item_gdf.groupby('cluster').apply(lambda x: x.sample(1)).reset_index(drop=True)
-
-  return selected_items
-
-"""## Execution"""
-
-# activity_line_gdf.to_crs(epsg=3414, inplace = True)
-# pois_gdf.to_crs(epsg=3414, inplace = True)
-# amenity_gdf.to_crs(epsg=3414, inplace = True)
-# avoidance_gdf.to_crs(epsg=3414, inplace = True)
-
-# Create a search area around activity line
-search_buffer = activity_line_gdf.buffer(search_radius, resolution=16)
-search_buffer_gdf = gpd.GeoDataFrame(geometry=search_buffer, crs='EPSG:3414')
-
-near_pois = search_nearby_items(activity_line_gdf,search_buffer_gdf,pois_gdf)
-near_amenities = search_nearby_items(activity_line_gdf,search_buffer_gdf,amenity_gdf)
-near_avoidance = search_nearby_items(activity_line_gdf,search_buffer_gdf,avoidance_gdf)
-
-# Create avoidance zone around all avoidance item (i.e. buffer around every stairs, radius = 10m)
-avoidance_buffer = unary_union(near_avoidance.buffer(10, resolution=16))
-avoidance_buffer_gdf = gpd.GeoDataFrame(geometry=[avoidance_buffer], crs='EPSG:3414')
-
-# Used For Mapping
-search_buffer_gdf.to_crs(epsg=4326, inplace = True)
-
-# Used For Route Generation
-user_gdf.to_crs(epsg=4326, inplace = True)
-end_gdf.to_crs(epsg=4326, inplace = True)
-near_pois.to_crs(epsg=4326, inplace = True)
-near_amenities.to_crs(epsg=4326, inplace = True)
-avoidance_buffer_gdf.to_crs(epsg=4326, inplace = True)
-
-
-
-##############################################
-##############################################
-"""# Route Generation
-
-# ## Functions to Generate Routes
+# ## Functions For Data Preparation
 # """
 
+# def search_nearby_items(activity_line, search_buffer_gdf, item_gdf):
+#   # Returns a GeoDataFrame of items within search_buffer
 
-def nearest_neighbor_route(start_gdf, points_gdf):
-  """
-  Generate a route by iteratively finding the nearest neighbor.
-  """
-  # Create an GeoDataFrame to store the route points (starting from start point)
-  route_points_gdf = start_gdf.copy()
+#   # Find intersection
+#   intersecting_item_gdf = gpd.sjoin(item_gdf, search_buffer_gdf, how='inner', predicate='intersects')
+#   intersecting_item_gdf.drop(columns=['index_right'], inplace=True)
 
-  while not points_gdf.empty:
+#   return intersecting_item_gdf
 
-    current_point = route_points_gdf.iloc[-1].geometry
+# def find_clusters(item_gdf, num_clusters):
 
-    # Calculate nearest point from current point
-    points_gdf['distance'] = points_gdf.geometry.apply(lambda x: current_point.distance(x))
-    nearest_idx = points_gdf['distance'].idxmin()
-    nearest = points_gdf.loc[[nearest_idx]]
+#   # return original GeoDataFrame if number of items <= number of clusters set by user
+#   if len(item_gdf) <= num_clusters:
+#     item_gdf['cluster'] = 1 # set all items into same cluster
+#     return item_gdf
 
-    # Concatenate the nearest point to the route
-    route_points_gdf = pd.concat([route_points_gdf, nearest], ignore_index=True)
-    points_gdf = points_gdf.drop(nearest_idx)
+#   # Perform K means clustering using coordinates
+#   coords = item_gdf.geometry.apply(lambda geom: [geom.x, geom.y]).tolist()
+#   kmeans = KMeans(n_clusters=num_clusters, n_init=10).fit(coords)
+#   item_gdf['cluster'] = kmeans.labels_
 
-  return route_points_gdf
+#   # Randomly select one POI from each cluster
+#   selected_items = item_gdf.groupby('cluster').apply(lambda x: x.sample(1)).reset_index(drop=True)
 
+#   return selected_items
 
+# """## Execution"""
 
-def get_route_OneMapAPI(start, end):
-  """
-  Retrieve a walking route from OneMap API between start and end points.
-  """
+# # activity_line_gdf.to_crs(epsg=3414, inplace = True)
+# # pois_gdf.to_crs(epsg=3414, inplace = True)
+# # amenity_gdf.to_crs(epsg=3414, inplace = True)
+# # avoidance_gdf.to_crs(epsg=3414, inplace = True)
 
-  url = f"https://www.onemap.gov.sg/api/public/routingsvc/route?start={start.y}%2C{start.x}&end={end.y}%2C{end.x}&routeType=walk"
-  headers = {"Authorization": API_KEY}
+# # Create a search area around activity line
+# search_buffer = activity_line_gdf.buffer(search_radius, resolution=16)
+# search_buffer_gdf = gpd.GeoDataFrame(geometry=search_buffer, crs='EPSG:3414')
 
-  response = requests.get(url, headers=headers)
+# near_pois = search_nearby_items(activity_line_gdf,search_buffer_gdf,pois_gdf)
+# near_amenities = search_nearby_items(activity_line_gdf,search_buffer_gdf,amenity_gdf)
+# near_avoidance = search_nearby_items(activity_line_gdf,search_buffer_gdf,avoidance_gdf)
 
-  if response.status_code != 200:
-      print(f"Error: HTTP status code {response.status_code}")
-      print("Unexpected Error, Check Validity of API KEY")
-      return None, None, None
+# # Create avoidance zone around all avoidance item (i.e. buffer around every stairs, radius = 10m)
+# avoidance_buffer = unary_union(near_avoidance.buffer(10, resolution=16))
+# avoidance_buffer_gdf = gpd.GeoDataFrame(geometry=[avoidance_buffer], crs='EPSG:3414')
 
-  # Extract data
-  data = response.json()
-  route_geometry = data['route_geometry']
-  time = data['route_summary']['total_time']
-  distance = data['route_summary']['total_distance']
+# # Used For Mapping
+# search_buffer_gdf.to_crs(epsg=4326, inplace = True)
 
-  # Converting route_geometry into a LineString feature
-  coordinates = polyline.decode(route_geometry)
-  route_line = LineString(coordinates)
-
-  flipped_coordinates = [(y, x) for x, y in route_line.coords]
-  flipped_route_line = LineString(flipped_coordinates)
-
-  return flipped_route_line, time, distance
-
-
-
-def find_nearest_amenity(point, amenity_gdf):
-  """
-  Find the nearest amenity to a given point.
-  """
-  # Transform CRS to projected CRS to ensure accurate calculation
-  point_gdf = gpd.GeoDataFrame({'geometry': [point]}, crs='EPSG:4326')
-  point_gdf = point_gdf.to_crs(epsg=3414)
-
-  amenity_gdf.to_crs(epsg=3414, inplace=True)
-
-  # Find distance between point and amenity in amenity_gdf
-  amenity_gdf['distance'] = amenity_gdf.geometry.apply(lambda x: point_gdf.geometry.distance(x).min())
-
-  # Transform back to WGS 84
-  amenity_gdf.to_crs(epsg=4326, inplace=True)
-
-  # Find the minimum distance and the corresponding nearest amenity
-  nearest_amenity = amenity_gdf.loc[amenity_gdf['distance'].idxmin()]
-  distance = nearest_amenity['distance']
-
-  # Drop distance column
-  amenity_gdf = amenity_gdf.drop('distance')
-
-  return nearest_amenity, distance
+# # Used For Route Generation
+# user_gdf.to_crs(epsg=4326, inplace = True)
+# end_gdf.to_crs(epsg=4326, inplace = True)
+# near_pois.to_crs(epsg=4326, inplace = True)
+# near_amenities.to_crs(epsg=4326, inplace = True)
+# avoidance_buffer_gdf.to_crs(epsg=4326, inplace = True)
 
 
 
-def generate_full_route(route_points_gdf, max_route_length, near_amenities, selected_amenities, near_pois, selected_pois, avoidance_buffer_gdf):
-    """
-    Generate a full route considering amenities and avoidance zones.
-    """
-    route_geometries = []
-    total_time = 0
-    total_distance = 0
+# ##############################################
+# ##############################################
+# """# Route Generation
 
-    CUT_OFF = 1000
-    BACKTRACK_LIMIT = 10
+# # ## Functions to Generate Routes
+# # """
 
-    end_point_gdf = route_points_gdf.iloc[[-1]]
-    end_point = end_point_gdf.geometry.iloc[0]
-    last_amenity_idx = -1
-    backtrack_attempts = 0
-    avoidance_check_attempts = 0
 
-    route_times = []
-    route_distances = []
+# def nearest_neighbor_route(start_gdf, points_gdf):
+#   """
+#   Generate a route by iteratively finding the nearest neighbor.
+#   """
+#   # Create an GeoDataFrame to store the route points (starting from start point)
+#   route_points_gdf = start_gdf.copy()
 
-    i = 0
+#   while not points_gdf.empty:
 
-    while i < len(route_points_gdf) - 1:
-        current_point_gdf = route_points_gdf.iloc[[i]]
-        next_point_gdf = route_points_gdf.iloc[[i + 1]]
+#     current_point = route_points_gdf.iloc[-1].geometry
 
-        current_point = current_point_gdf.geometry.iloc[0]
-        next_point = next_point_gdf.geometry.iloc[0]
+#     # Calculate nearest point from current point
+#     points_gdf['distance'] = points_gdf.geometry.apply(lambda x: current_point.distance(x))
+#     nearest_idx = points_gdf['distance'].idxmin()
+#     nearest = points_gdf.loc[[nearest_idx]]
 
-        # Retrieve geometry for route segment from OneMap API
-        route_geometry, time, distance = get_route_OneMapAPI(current_point, next_point)
+#     # Concatenate the nearest point to the route
+#     route_points_gdf = pd.concat([route_points_gdf, nearest], ignore_index=True)
+#     points_gdf = points_gdf.drop(nearest_idx)
 
-        # Check if route segment intersects avoidance zones
-        if avoidance_check_attempts <= 5:
-            avoidance_check_attempts += 1
-            temp_next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, should_continue = check_avoidance(
-                route_geometry, current_point_gdf, next_point_gdf, near_pois, selected_pois, selected_amenities, avoidance_buffer_gdf
-            )
+#   return route_points_gdf
 
-            # If next_point has changed, update route points
-            if next_point_gdf.geometry.iloc[0] != temp_next_point_gdf.geometry.iloc[0]:
-                next_point_gdf = temp_next_point_gdf
-                route_points_gdf.loc[i + 1] = next_point_gdf.iloc[0]
 
-                # Retry a new loop (which will get new geometry and check avoidance)
-                continue
 
-        # If total distance is too long, start backtracking
-        if total_distance + distance >= max_route_length:
-            route_points_gdf, route_geometries, total_time, total_distance = handle_backtrack(
-                route_points_gdf, route_geometries, route_times, route_distances, time, distance, total_time, total_distance, max_route_length, end_point, i, backtrack_attempts
-            )
-            return route_points_gdf, route_geometries, total_time, total_distance, selected_amenities
+# def get_route_OneMapAPI(start, end):
+#   """
+#   Retrieve a walking route from OneMap API between start and end points.
+#   """
 
-        # If next point is too long, add amenity
-        if (distance >= CUT_OFF) and (next_point != end_point) and ((i - last_amenity_idx) > 1) and (len(near_amenities) != 0):
-            route_points_gdf, amenity, selected_amenities, last_amenity_idx = add_nearest_amenity(
-                route_points_gdf, current_point, near_amenities, selected_amenities, i, last_amenity_idx
-            )
+#   url = f"https://www.onemap.gov.sg/api/public/routingsvc/route?start={start.y}%2C{start.x}&end={end.y}%2C{end.x}&routeType=walk"
+#   headers = {"Authorization": API_KEY}
 
-            # Redo geometry
-            route_geometry, time, distance = get_route_OneMapAPI(current_point, amenity.geometry)
-            current_point_gdf = route_points_gdf.iloc[[i]]
-            next_point_gdf = route_points_gdf.iloc[[i + 1]]
+#   response = requests.get(url, headers=headers)
 
-            current_point = current_point_gdf.geometry.iloc[0]
-            next_point = next_point_gdf.geometry.iloc[0]
+#   if response.status_code != 200:
+#       print(f"Error: HTTP status code {response.status_code}")
+#       print("Unexpected Error, Check Validity of API KEY")
+#       return None, None, None
 
-        # Add next route segment into route_geometries
-        current_location_name = current_point_gdf['NAME'].iloc[0]
-        next_location_name = next_point_gdf['NAME'].iloc[0]
-        print(f"Route from {current_location_name} to {next_location_name}")
+#   # Extract data
+#   data = response.json()
+#   route_geometry = data['route_geometry']
+#   time = data['route_summary']['total_time']
+#   distance = data['route_summary']['total_distance']
 
-        route_geometries.append(route_geometry)
-        route_times.append(time)
-        route_distances.append(distance)
-        total_time += time
-        total_distance += distance
+#   # Converting route_geometry into a LineString feature
+#   coordinates = polyline.decode(route_geometry)
+#   route_line = LineString(coordinates)
 
-        # Reset avoidance check for current point
-        avoidance_check_attempts = 0
+#   flipped_coordinates = [(y, x) for x, y in route_line.coords]
+#   flipped_route_line = LineString(flipped_coordinates)
 
-        # Move onto next point
-        i += 1
+#   return flipped_route_line, time, distance
 
-    return route_points_gdf, route_geometries, total_time, total_distance, selected_amenities
+
+
+# def find_nearest_amenity(point, amenity_gdf):
+#   """
+#   Find the nearest amenity to a given point.
+#   """
+#   # Transform CRS to projected CRS to ensure accurate calculation
+#   point_gdf = gpd.GeoDataFrame({'geometry': [point]}, crs='EPSG:4326')
+#   point_gdf = point_gdf.to_crs(epsg=3414)
+
+#   amenity_gdf.to_crs(epsg=3414, inplace=True)
+
+#   # Find distance between point and amenity in amenity_gdf
+#   amenity_gdf['distance'] = amenity_gdf.geometry.apply(lambda x: point_gdf.geometry.distance(x).min())
+
+#   # Transform back to WGS 84
+#   amenity_gdf.to_crs(epsg=4326, inplace=True)
+
+#   # Find the minimum distance and the corresponding nearest amenity
+#   nearest_amenity = amenity_gdf.loc[amenity_gdf['distance'].idxmin()]
+#   distance = nearest_amenity['distance']
+
+#   # Drop distance column
+#   amenity_gdf = amenity_gdf.drop('distance')
+
+#   return nearest_amenity, distance
+
+
+
+# def generate_full_route(route_points_gdf, max_route_length, near_amenities, selected_amenities, near_pois, selected_pois, avoidance_buffer_gdf):
+#     """
+#     Generate a full route considering amenities and avoidance zones.
+#     """
+#     route_geometries = []
+#     total_time = 0
+#     total_distance = 0
+
+#     CUT_OFF = 1000
+#     BACKTRACK_LIMIT = 10
+
+#     end_point_gdf = route_points_gdf.iloc[[-1]]
+#     end_point = end_point_gdf.geometry.iloc[0]
+#     last_amenity_idx = -1
+#     backtrack_attempts = 0
+#     avoidance_check_attempts = 0
+
+#     route_times = []
+#     route_distances = []
+
+#     i = 0
+
+#     while i < len(route_points_gdf) - 1:
+#         current_point_gdf = route_points_gdf.iloc[[i]]
+#         next_point_gdf = route_points_gdf.iloc[[i + 1]]
+
+#         current_point = current_point_gdf.geometry.iloc[0]
+#         next_point = next_point_gdf.geometry.iloc[0]
+
+#         # Retrieve geometry for route segment from OneMap API
+#         route_geometry, time, distance = get_route_OneMapAPI(current_point, next_point)
+
+#         # Check if route segment intersects avoidance zones
+#         if avoidance_check_attempts <= 5:
+#             avoidance_check_attempts += 1
+#             temp_next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, should_continue = check_avoidance(
+#                 route_geometry, current_point_gdf, next_point_gdf, near_pois, selected_pois, selected_amenities, avoidance_buffer_gdf
+#             )
+
+#             # If next_point has changed, update route points
+#             if next_point_gdf.geometry.iloc[0] != temp_next_point_gdf.geometry.iloc[0]:
+#                 next_point_gdf = temp_next_point_gdf
+#                 route_points_gdf.loc[i + 1] = next_point_gdf.iloc[0]
+
+#                 # Retry a new loop (which will get new geometry and check avoidance)
+#                 continue
+
+#         # If total distance is too long, start backtracking
+#         if total_distance + distance >= max_route_length:
+#             route_points_gdf, route_geometries, total_time, total_distance = handle_backtrack(
+#                 route_points_gdf, route_geometries, route_times, route_distances, time, distance, total_time, total_distance, max_route_length, end_point, i, backtrack_attempts
+#             )
+#             return route_points_gdf, route_geometries, total_time, total_distance, selected_amenities
+
+#         # If next point is too long, add amenity
+#         if (distance >= CUT_OFF) and (next_point != end_point) and ((i - last_amenity_idx) > 1) and (len(near_amenities) != 0):
+#             route_points_gdf, amenity, selected_amenities, last_amenity_idx = add_nearest_amenity(
+#                 route_points_gdf, current_point, near_amenities, selected_amenities, i, last_amenity_idx
+#             )
+
+#             # Redo geometry
+#             route_geometry, time, distance = get_route_OneMapAPI(current_point, amenity.geometry)
+#             current_point_gdf = route_points_gdf.iloc[[i]]
+#             next_point_gdf = route_points_gdf.iloc[[i + 1]]
+
+#             current_point = current_point_gdf.geometry.iloc[0]
+#             next_point = next_point_gdf.geometry.iloc[0]
+
+#         # Add next route segment into route_geometries
+#         current_location_name = current_point_gdf['NAME'].iloc[0]
+#         next_location_name = next_point_gdf['NAME'].iloc[0]
+#         print(f"Route from {current_location_name} to {next_location_name}")
+
+#         route_geometries.append(route_geometry)
+#         route_times.append(time)
+#         route_distances.append(distance)
+#         total_time += time
+#         total_distance += distance
+
+#         # Reset avoidance check for current point
+#         avoidance_check_attempts = 0
+
+#         # Move onto next point
+#         i += 1
+
+#     return route_points_gdf, route_geometries, total_time, total_distance, selected_amenities
+
+
+
+# # # Helper Function
+# # def handle_backtrack(route_points_gdf, result, route_times, route_distances, time, distance, total_time, total_distance, max_route_length, end_point, i, backtrack_attempts):
+# #   BACKTRACK_LIMIT = 10
+# #   while total_distance + distance >= max_route_length and i > 0 and backtrack_attempts < BACKTRACK_LIMIT:
+# #     i -= 1
+# #     current_point_gdf = route_points_gdf.iloc[[i]]
+# #     current_point = current_point_gdf.geometry.iloc[0]
+
+# #     result.pop()
+# #     total_time -= route_times.pop()
+# #     total_distance -= route_distances.pop()
+# #     route_points_gdf = route_points_gdf.drop(route_points_gdf.index[-1])
+
+# #     backtrack_attempts += 1
+
+# #     route_geometry, time, distance = get_route_OneMapAPI(current_point, end_point)
+
+# #   if total_distance + distance >= max_route_length:
+# #     print("Unable to find a valid route within the distance limit.")
+# #     return None, None, None, None
+
+# #   route_points_gdf = pd.concat([route_points_gdf.iloc[:i + 1], pd.DataFrame([end_point])], ignore_index=True)
+# #   result.append(route_geometry)
+# #   total_time += time
+# #   total_distance += distance
+# #   return route_points_gdf, result, total_time, total_distance
 
 
 
 # # Helper Function
-# def handle_backtrack(route_points_gdf, result, route_times, route_distances, time, distance, total_time, total_distance, max_route_length, end_point, i, backtrack_attempts):
-#   BACKTRACK_LIMIT = 10
-#   while total_distance + distance >= max_route_length and i > 0 and backtrack_attempts < BACKTRACK_LIMIT:
-#     i -= 1
-#     current_point_gdf = route_points_gdf.iloc[[i]]
-#     current_point = current_point_gdf.geometry.iloc[0]
+# def add_nearest_amenity(route_points_gdf, current_point, near_amenities, selected_amenities, i, last_amenity_idx):
+#   CUT_OFF = 500
+#   amenity, amenity_distance = find_nearest_amenity(current_point, near_amenities)
 
-#     result.pop()
-#     total_time -= route_times.pop()
-#     total_distance -= route_distances.pop()
-#     route_points_gdf = route_points_gdf.drop(route_points_gdf.index[-1])
+#   if amenity_distance <= CUT_OFF:
+#     temp_gdf = gpd.GeoDataFrame([amenity], columns=selected_amenities.columns, crs='EPSG:4326')
+#     selected_amenities = pd.concat([selected_amenities, temp_gdf], ignore_index=True)
 
-#     backtrack_attempts += 1
+#     route_points_gdf = pd.concat([route_points_gdf.iloc[:i+1], gpd.GeoDataFrame([amenity], crs='EPSG:4326'), route_points_gdf.iloc[i+1:]], ignore_index=True)
+#     last_amenity_idx = i + 1
 
-#     route_geometry, time, distance = get_route_OneMapAPI(current_point, end_point)
-
-#   if total_distance + distance >= max_route_length:
-#     print("Unable to find a valid route within the distance limit.")
-#     return None, None, None, None
-
-#   route_points_gdf = pd.concat([route_points_gdf.iloc[:i + 1], pd.DataFrame([end_point])], ignore_index=True)
-#   result.append(route_geometry)
-#   total_time += time
-#   total_distance += distance
-#   return route_points_gdf, result, total_time, total_distance
+#   return route_points_gdf, amenity, selected_amenities, last_amenity_idx
 
 
 
-# Helper Function
-def add_nearest_amenity(route_points_gdf, current_point, near_amenities, selected_amenities, i, last_amenity_idx):
-  CUT_OFF = 500
-  amenity, amenity_distance = find_nearest_amenity(current_point, near_amenities)
+# # Helper Function
+# def check_avoidance(route_geometry, current_point_gdf, next_point_gdf, near_pois, selected_pois, selected_amenities, avoidance_buffer_gdf):
+#   if avoidance_buffer_gdf.is_empty[0]:
+#     return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
 
-  if amenity_distance <= CUT_OFF:
-    temp_gdf = gpd.GeoDataFrame([amenity], columns=selected_amenities.columns, crs='EPSG:4326')
-    selected_amenities = pd.concat([selected_amenities, temp_gdf], ignore_index=True)
+#   # if route cuts into the avoidance zones
+#   if route_geometry.intersects(avoidance_buffer_gdf.unary_union):
 
-    route_points_gdf = pd.concat([route_points_gdf.iloc[:i+1], gpd.GeoDataFrame([amenity], crs='EPSG:4326'), route_points_gdf.iloc[i+1:]], ignore_index=True)
-    last_amenity_idx = i + 1
+#     # Print out which section is intersecting the avoidance zones
+#     current_location_name = current_point_gdf['NAME'].iloc[0]
+#     next_location_name = next_point_gdf['NAME'].iloc[0]
+#     print(f"Intersection Found. Route from {current_location_name} to {next_location_name} intersects with avoidance area. Reselecting route point.")
 
-  return route_points_gdf, amenity, selected_amenities, last_amenity_idx
+#     if next_point_gdf['NAME'].iloc[0] == 'User':
+#       return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
 
+#     # Check if next point is a POI
+#     if next_point_gdf['TYPE'].iloc[0] not in ['Toilet', 'Drinking Water']:
 
+#       # Reselect a route point from the same cluster
+#       cluster_num = next_point_gdf['cluster'].iloc[0]
 
-# Helper Function
-def check_avoidance(route_geometry, current_point_gdf, next_point_gdf, near_pois, selected_pois, selected_amenities, avoidance_buffer_gdf):
-  if avoidance_buffer_gdf.is_empty[0]:
-    return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
+#       # Exclude next point from near_pois and selected_pois.
+#       near_pois = near_pois[near_pois['geometry'] != next_point_gdf.geometry.iloc[0]]
+#       # removed the next line due to some errors
+#       selected_pois = selected_pois[selected_pois['geometry'] != next_point_gdf.geometry.iloc[0]]
 
-  # if route cuts into the avoidance zones
-  if route_geometry.intersects(avoidance_buffer_gdf.unary_union):
+#       # Find matching rows in near_pois
+#       cluster_points = near_pois[near_pois['cluster'] == cluster_num]
 
-    # Print out which section is intersecting the avoidance zones
-    current_location_name = current_point_gdf['NAME'].iloc[0]
-    next_location_name = next_point_gdf['NAME'].iloc[0]
-    print(f"Intersection Found. Route from {current_location_name} to {next_location_name} intersects with avoidance area. Reselecting route point.")
+#       # If another point exists
+#       if len(cluster_points) >= 1:
 
-    if next_point_gdf['NAME'].iloc[0] == 'User':
-      return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
+#         # update next_point_gdf and selected_pois
+#         next_point_gdf = cluster_points.sample()
 
-    # Check if next point is a POI
-    if next_point_gdf['TYPE'].iloc[0] not in ['Toilet', 'Drinking Water']:
+#         selected_pois = pd.concat([selected_pois, next_point_gdf], ignore_index=True)
+#         return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, True
+#       else:
 
-      # Reselect a route point from the same cluster
-      cluster_num = next_point_gdf['cluster'].iloc[0]
+#         # update next_point_gdf and selected pois by a random sample within near_pois
+#         next_point_gdf = near_pois.sample()
 
-      # Exclude next point from near_pois and selected_pois.
-      near_pois = near_pois[near_pois['geometry'] != next_point_gdf.geometry.iloc[0]]
-      # removed the next line due to some errors
-      selected_pois = selected_pois[selected_pois['geometry'] != next_point_gdf.geometry.iloc[0]]
+#         selected_pois = pd.concat([selected_pois, next_point_gdf], ignore_index=True)
+#         return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, True
 
-      # Find matching rows in near_pois
-      cluster_points = near_pois[near_pois['cluster'] == cluster_num]
-
-      # If another point exists
-      if len(cluster_points) >= 1:
-
-        # update next_point_gdf and selected_pois
-        next_point_gdf = cluster_points.sample()
-
-        selected_pois = pd.concat([selected_pois, next_point_gdf], ignore_index=True)
-        return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, True
-      else:
-
-        # update next_point_gdf and selected pois by a random sample within near_pois
-        next_point_gdf = near_pois.sample()
-
-        selected_pois = pd.concat([selected_pois, next_point_gdf], ignore_index=True)
-        return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, True
-
-  else:
-    return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
+#   else:
+#     return next_point_gdf, near_pois, selected_pois, near_amenities, selected_amenities, False
 
 
 
-# def generate_route_points(user_gdf, near_pois, num_POIs, end_gdf):
-#     """
-#     Generate a sorted list of route points.
-#     """
-#     poi_clusters = find_clusters(near_pois, num_POIs)
-#     selected_pois = poi_clusters.groupby('cluster').sample(n=1).reset_index(drop=True)
-#     route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois)
-#     route_points_gdf = pd.concat([route_points_gdf, end_gdf], ignore_index=True)
-#     return route_points_gdf, poi_clusters, selected_pois
+# # def generate_route_points(user_gdf, near_pois, num_POIs, end_gdf):
+# #     """
+# #     Generate a sorted list of route points.
+# #     """
+# #     poi_clusters = find_clusters(near_pois, num_POIs)
+# #     selected_pois = poi_clusters.groupby('cluster').sample(n=1).reset_index(drop=True)
+# #     route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois)
+# #     route_points_gdf = pd.concat([route_points_gdf, end_gdf], ignore_index=True)
+# #     return route_points_gdf, poi_clusters, selected_pois
 
 
 
-# def check_intersections(route_geometries, avoidance_buffer_gdf):
-#     """
-#     Check if any route geometries intersect with the avoidance buffer zones.
+# # def check_intersections(route_geometries, avoidance_buffer_gdf):
+# #     """
+# #     Check if any route geometries intersect with the avoidance buffer zones.
 
-#     Parameters:
-#     - route_geometries (list): List of Linestrings objects (route geometries).
-#     - avoidance_buffer_gdf (GeoDataFrame): Areas to avoid.
+# #     Parameters:
+# #     - route_geometries (list): List of Linestrings objects (route geometries).
+# #     - avoidance_buffer_gdf (GeoDataFrame): Areas to avoid.
 
-#     Returns:
-#     - bool: True if there is an intersection, False otherwise.
-#     """
-#     for route in route_geometries:
-#         if avoidance_buffer_gdf.intersects(route).any():
-#             return True
-#     return False
+# #     Returns:
+# #     - bool: True if there is an intersection, False otherwise.
+# #     """
+# #     for route in route_geometries:
+# #         if avoidance_buffer_gdf.intersects(route).any():
+# #             return True
+# #     return False
 
 
-# def regenerate_route(user_gdf, near_pois, num_POIs, end_gdf, near_amenities, avoidance_buffer_gdf, max_route_length):
-#     """
-#     Regenerate the route until a valid one is found or maximum attempts/time is reached.
-#     """
-#     global attempts
-#     while attempts < MAX_ATTEMPTS:
-#         if time.time() - start_time > MAX_TIME:
-#             print("Maximum time exceeded. Stopping the route generation process.")
-#             break
+# # def regenerate_route(user_gdf, near_pois, num_POIs, end_gdf, near_amenities, avoidance_buffer_gdf, max_route_length):
+# #     """
+# #     Regenerate the route until a valid one is found or maximum attempts/time is reached.
+# #     """
+# #     global attempts
+# #     while attempts < MAX_ATTEMPTS:
+# #         if time.time() - start_time > MAX_TIME:
+# #             print("Maximum time exceeded. Stopping the route generation process.")
+# #             break
 
-#         print(f"Attempt {attempts + 1}: Route intersects with avoidance zones. Regenerating route...")
+# #         print(f"Attempt {attempts + 1}: Route intersects with avoidance zones. Regenerating route...")
 
-#         # Generate sorted list of route points
-#         route_points_gdf, poi_clusters, selected_pois = generate_route_points(user_gdf, near_pois, num_POIs, end_gdf)
+# #         # Generate sorted list of route points
+# #         route_points_gdf, poi_clusters, selected_pois = generate_route_points(user_gdf, near_pois, num_POIs, end_gdf)
 
-#         # Initialize variables
-#         selected_amenities = empty_gdf
+# #         # Initialize variables
+# #         selected_amenities = empty_gdf
 
-#         route_points_gdf, route_geometries, time, distance, selected_amenities = generate_full_route(
-#             route_points_gdf, max_route_length, near_amenities, selected_amenities, poi_clusters, selected_pois, avoidance_buffer_gdf
+# #         route_points_gdf, route_geometries, time, distance, selected_amenities = generate_full_route(
+# #             route_points_gdf, max_route_length, near_amenities, selected_amenities, poi_clusters, selected_pois, avoidance_buffer_gdf
+# #         )
+
+# #         if route_points_gdf is not None and not check_intersections(route_geometries, avoidance_buffer_gdf):
+# #             return route_points_gdf, route_geometries, time, distance, selected_amenities, selected_pois
+
+# #         attempts += 1
+
+# #     print("Maximum attempts reached. Unable to find a valid route that satisfies the requirements.")
+# #     return None, None, None, None, None, None
+
+# """## Execution"""
+
+# import time
+
+# # Define the maximum number of attempts and time to avoid infinite loops
+# MAX_ATTEMPTS = 2
+# MAX_TIME = 60  # Maximum time in seconds
+
+# # Record the start time
+# start_time = time.time()
+# attempts = 0
+
+# # Generate initial route
+# route_points_gdf, poi_clusters, selected_pois = generate_route_points(user_gdf, near_pois, num_POIs, end_gdf)
+
+# # Initialize variables
+# selected_amenities = empty_gdf
+
+# # Generate Route
+# final_route_points_gdf, final_route_geometries, final_time, final_distance, final_selected_amenities = generate_full_route(
+#     route_points_gdf, max_route_length, near_amenities, selected_amenities, poi_clusters, selected_pois, avoidance_buffer_gdf
+# )
+
+# if final_route_points_gdf is not None:
+#     final_selected_pois = selected_pois[selected_pois['NAME'].isin(final_route_points_gdf['NAME'])]
+
+#     if check_intersections(final_route_geometries, avoidance_buffer_gdf):
+#         final_route_points_gdf, final_route_geometries, final_time, final_distance, final_selected_amenities, final_selected_pois = regenerate_route(
+#             user_gdf, near_pois, num_POIs, end_gdf, near_amenities, avoidance_buffer_gdf, max_route_length
 #         )
 
-#         if route_points_gdf is not None and not check_intersections(route_geometries, avoidance_buffer_gdf):
-#             return route_points_gdf, route_geometries, time, distance, selected_amenities, selected_pois
-
-#         attempts += 1
-
-#     print("Maximum attempts reached. Unable to find a valid route that satisfies the requirements.")
-#     return None, None, None, None, None, None
-
-"""## Execution"""
-
-import time
-
-# Define the maximum number of attempts and time to avoid infinite loops
-MAX_ATTEMPTS = 2
-MAX_TIME = 60  # Maximum time in seconds
-
-# Record the start time
-start_time = time.time()
-attempts = 0
-
-# Generate initial route
-route_points_gdf, poi_clusters, selected_pois = generate_route_points(user_gdf, near_pois, num_POIs, end_gdf)
-
-# Initialize variables
-selected_amenities = empty_gdf
-
-# Generate Route
-final_route_points_gdf, final_route_geometries, final_time, final_distance, final_selected_amenities = generate_full_route(
-    route_points_gdf, max_route_length, near_amenities, selected_amenities, poi_clusters, selected_pois, avoidance_buffer_gdf
-)
-
-if final_route_points_gdf is not None:
-    final_selected_pois = selected_pois[selected_pois['NAME'].isin(final_route_points_gdf['NAME'])]
-
-    if check_intersections(final_route_geometries, avoidance_buffer_gdf):
-        final_route_points_gdf, final_route_geometries, final_time, final_distance, final_selected_amenities, final_selected_pois = regenerate_route(
-            user_gdf, near_pois, num_POIs, end_gdf, near_amenities, avoidance_buffer_gdf, max_route_length
-        )
-
-    if final_route_points_gdf is not None:
-        print("Valid route found that satisfies all requirements.")
-    else:
-        print("No valid route found.")
-else:
-    print("No valid route found.")
+#     if final_route_points_gdf is not None:
+#         print("Valid route found that satisfies all requirements.")
+#     else:
+#         print("No valid route found.")
+# else:
+#     print("No valid route found.")
 
 
 
-##############################################
-##############################################
-"""# Export"""
+# ##############################################
+# ##############################################
+# """# Export"""
 
-# Remove the last row from final_route_points_gdf
-final_route_points_gdf = final_route_points_gdf.iloc[:-1]
+# # Remove the last row from final_route_points_gdf
+# final_route_points_gdf = final_route_points_gdf.iloc[:-1]
 
-# Concatenate final_route_points_gdf with end_gdf
-final_route_points_gdf = pd.concat([final_route_points_gdf, end_gdf], ignore_index=True)
+# # Concatenate final_route_points_gdf with end_gdf
+# final_route_points_gdf = pd.concat([final_route_points_gdf, end_gdf], ignore_index=True)
 
-# Select specific columns from final_route_points_gdf
-final_route_points_gdf = final_route_points_gdf[['NAME', 'TYPE', 'PHOTOURL', 'DESCRIPTION', 'geometry']]
+# # Select specific columns from final_route_points_gdf
+# final_route_points_gdf = final_route_points_gdf[['NAME', 'TYPE', 'PHOTOURL', 'DESCRIPTION', 'geometry']]
 
-# Create a GeoDataFrame for final_route_geometries
-final_route_gdf = gpd.GeoDataFrame(geometry=final_route_geometries, crs="EPSG:4326")
+# # Create a GeoDataFrame for final_route_geometries
+# final_route_gdf = gpd.GeoDataFrame(geometry=final_route_geometries, crs="EPSG:4326")
 
-# Save GeoDataFrames to GeoJSON files
-geojson_files = {
-    "search_buffer.geojson": search_buffer_gdf,
-    "final_route_points.geojson": final_route_points_gdf,
-    "avoidance_buffer.geojson": avoidance_buffer_gdf,
-    "final_route.geojson": final_route_gdf
-}
+# # Save GeoDataFrames to GeoJSON files
+# geojson_files = {
+#     "search_buffer.geojson": search_buffer_gdf,
+#     "final_route_points.geojson": final_route_points_gdf,
+#     "avoidance_buffer.geojson": avoidance_buffer_gdf,
+#     "final_route.geojson": final_route_gdf
+# }
 
-for filename, gdf in geojson_files.items():
-    gdf.to_file(filename, driver="GeoJSON")
+# for filename, gdf in geojson_files.items():
+#     gdf.to_file(filename, driver="GeoJSON")
 
 
 
-##############################################
-##############################################
-"""# Import"""
+# ##############################################
+# ##############################################
+# """# Import"""
 
-# Function to read and set CRS for a GeoJSON file
-def read_and_set_crs(filepath, crs="EPSG:4326"):
-    gdf = gpd.read_file(filepath)
-    return gdf.to_crs(crs)
+# # Function to read and set CRS for a GeoJSON file
+# def read_and_set_crs(filepath, crs="EPSG:4326"):
+#     gdf = gpd.read_file(filepath)
+#     return gdf.to_crs(crs)
 
-# Filepaths
-filepaths = {
-    "search_buffer": "search_buffer.geojson",
-    "final_route_points": "final_route_points.geojson",
-    "avoidance_buffer": "avoidance_buffer.geojson",
-    "final_route": "final_route.geojson"
-}
+# # Filepaths
+# filepaths = {
+#     "search_buffer": "search_buffer.geojson",
+#     "final_route_points": "final_route_points.geojson",
+#     "avoidance_buffer": "avoidance_buffer.geojson",
+#     "final_route": "final_route.geojson"
+# }
 
-# Read GeoJSON files into GeoDataFrames and ensure CRS is set to WGS84
-search_buffer_gdf = read_and_set_crs(filepaths["search_buffer"])
-final_route_points_gdf = read_and_set_crs(filepaths["final_route_points"])
-avoidance_buffer_gdf = read_and_set_crs(filepaths["avoidance_buffer"])
-final_route_gdf = read_and_set_crs(filepaths["final_route"])
+# # Read GeoJSON files into GeoDataFrames and ensure CRS is set to WGS84
+# search_buffer_gdf = read_and_set_crs(filepaths["search_buffer"])
+# final_route_points_gdf = read_and_set_crs(filepaths["final_route_points"])
+# avoidance_buffer_gdf = read_and_set_crs(filepaths["avoidance_buffer"])
+# final_route_gdf = read_and_set_crs(filepaths["final_route"])
 
-# Extract user and end GeoDataFrames from final_route_points_gdf
-user_gdf = final_route_points_gdf.iloc[[0]]
-end_gdf = final_route_points_gdf.iloc[[-1]]
+# # Extract user and end GeoDataFrames from final_route_points_gdf
+# user_gdf = final_route_points_gdf.iloc[[0]]
+# end_gdf = final_route_points_gdf.iloc[[-1]]
 
-# Extract POI and Amenity Points
-final_route_points_gdf = final_route_points_gdf.iloc[1:-1]
+# # Extract POI and Amenity Points
+# final_route_points_gdf = final_route_points_gdf.iloc[1:-1]
 
-# Convert final_route_gdf to a list of LineStrings
-final_route = final_route_gdf.geometry.tolist()
+# # Convert final_route_gdf to a list of LineStrings
+# final_route = final_route_gdf.geometry.tolist()
