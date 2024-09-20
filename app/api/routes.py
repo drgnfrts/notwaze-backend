@@ -26,15 +26,11 @@ async def get_geojson_file(file_key: str, request: Request):
     """
     return get_geojson(file_key, request)
     
-@router.post("/collect-user-data")
-async def collect_user_data(request: Request, user_data: dict):
-    """
-    Endpoint to collect and store user-specific data in the application state.
-    """
+@router.post("/generate_route")
+async def generate_route_endpoint(request: Request, user_data: dict):
     try:
-
-        # Store user data in app state with JSON-serializable format
-
+        # Access the GeoJSON files and user data from app state
+        
         request.app.state.user_data = {
             "user_location": user_data["user_location"],
             "end_location": user_data["end_location"],
@@ -47,20 +43,8 @@ async def collect_user_data(request: Request, user_data: dict):
             "barrier_free": user_data['barrier_free'] #True
         }
 
-        # Return the stored user data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error storing user data: {str(e)}")
-    return {"message": "User data collected successfully", "data": request.app.state.user_data}
-    
-@router.post("/generate_route")
-async def generate_route_endpoint(request: Request):
-    try:
-        # Access the GeoJSON files and user data from app state
-        
-        user_data_state = request.app.state.user_data
-
         # Pass necessary data to the service function
-        route_response = generate_route(request, user_data_state)
+        route_response = generate_route(request, request.app.state.user_data)
         return route_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
