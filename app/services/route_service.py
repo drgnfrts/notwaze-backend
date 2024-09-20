@@ -61,8 +61,6 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     poi_gdf, amenity_gdf, avoidance_gdf = (
         concat_poi_gdf(keys, request) for keys in input_data_keys.values())
     
-    print(poi_gdf.crs, amenity_gdf.crs, avoidance_gdf.crs)
-    
     nearby_pois = search_nearby_items(search_gdf_sg, poi_gdf, False) if poi_gdf is not None else None
     nearby_amenity = search_nearby_items(search_gdf_sg, amenity_gdf, False) if amenity_gdf is not None else None
     nearby_avoidance_buffer = search_nearby_items(search_gdf_sg, avoidance_gdf, True) if avoidance_gdf is not None else None

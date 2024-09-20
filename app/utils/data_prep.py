@@ -78,7 +78,7 @@ def concat_poi_gdf(file_keys: list, request: Request):
     - concatenated_gdf (GeoDataFrame): A combined GDF of the multiple GDFs pulled and passed in
     
     """
-    if file_keys == []:
+    if file_keys == [] or file_keys == None:
         return None
     
     gdfs = []

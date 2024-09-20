@@ -7,7 +7,7 @@ from fastapi import HTTPException, Request
 import geojson
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(".env.production")
 
 # Fetch environment variables
 aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
@@ -34,6 +34,7 @@ def load_all_geojson_files() -> dict:
         if 'Contents' in response:
             for obj in response['Contents']:
                 file_key = obj['Key']
+                print(file_key)
                 if file_key.endswith('.geojson'):
                     # Fetch each GeoJSON file and store it in memory
                     geojson_files[file_key] = fetch_geojson_from_s3(file_key)

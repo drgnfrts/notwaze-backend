@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(".env.production")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
