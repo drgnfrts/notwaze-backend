@@ -1,6 +1,6 @@
 import geopandas as gpd
 from geopandas import GeoDataFrame
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 from app.models.schemas import RoutePoint, UserData
 from typing import List, Tuple
 import requests
@@ -10,7 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(".env.production")
 
 def nearest_neighbor_route(start_gdf: GeoDataFrame, points_gdf: GeoDataFrame, end_gdf: GeoDataFrame) -> GeoDataFrame:
     """
@@ -211,6 +211,28 @@ def intersects_barriers(route_geometry, avoidance_buffer_gdf):
         return True
     return False
 
+
+def get_last_point(metadata):
+    last_item = metadata['final_points_gdf_list'][-1]
+    
+    if isinstance(last_item, gpd.GeoDataFrame):
+        # If it's a GeoDataFrame, use .iloc
+        last_point = last_item.geometry.iloc[0]
+    elif isinstance(last_item, pd.Series):
+        # If it's a Series, access the geometry directly
+        last_point = last_item.geometry
+    elif isinstance(last_item, Point):
+        # If it's a Point object, access coordinates directly
+        last_point = last_item
+    else:
+        print(type(last_item))
+        raise ValueError("Unexpected type in final_points_gdf_list")
+    
+    return last_point
+
+
+
+
 def handle_backtrack(metadata: dict, end_point_gdf: GeoDataFrame, max_route_length: int):
 
     while metadata["total_distance"] >= max_route_length and len(metadata['final_points_gdf_list']) > 1:
@@ -221,7 +243,9 @@ def handle_backtrack(metadata: dict, end_point_gdf: GeoDataFrame, max_route_leng
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()
 
-        last_point = metadata['final_points_gdf_list'][-1].geometry.iloc[0]
+        print("Line 246")
+
+        last_point = get_last_point(metadata)
         end_point = end_point_gdf.geometry.iloc[0]
         print("------")
         print(f"last_point - {type(last_point)}")
