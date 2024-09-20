@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.responses import JSONResponse
-from app.services import get_geojson, generate_route
+from app.services import get_geojson, generate_route, generate_route_summary
 import json
 from shapely.geometry import Point
 import geopandas as gpd
@@ -62,5 +62,18 @@ async def generate_route_endpoint(request: Request):
         # Pass necessary data to the service function
         route_response = generate_route(request, user_data_state)
         return route_response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/generate-summary")
+async def generate_summary(request: Request):
+    try:
+        # Extract location names from the request
+        location_names = list({point.name for point in request.app.state.route_points})
+
+        # Call the LLM service to generate a summary
+        summary = await generate_route_summary(location_names)
+        return {"summary": summary}
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

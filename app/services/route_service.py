@@ -118,7 +118,8 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
                     geometry=[(lat, lon) for lon, lat in geom.coords]  # Extracting coordinates as (lat, lon)
                 )
             )
-
+    request.app.state.route_points = route_points
+    print(request.app.state.route_points)
     return RouteResponse(
         total_distance=metadata['total_distance'],
         total_time=metadata['total_time'],
