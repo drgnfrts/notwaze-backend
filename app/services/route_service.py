@@ -97,15 +97,34 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     if final_gdf is None:
         raise Exception("No valid route found within the given constraints.")
 
-    route_points = [
-        RoutePoint(
-            name=row['NAME'],
-            type=row['TYPE'],
-            latitude=row.geometry.y,
-            longitude=row.geometry.x
-        ) for idx, row in final_gdf.iterrows()
-    ]
+    # route_points = [
+    #     RoutePoint(
+    #         name=row['NAME'],
+    #         type=row['TYPE'],
+    #         latitude=row.geometry.y,
+    #         longitude=row.geometry.x
+    #     ) for idx, row in final_gdf.iterrows()
+    # ]
+    print("########################Creating Route Point######################")
+    route_points = []
 
+    for idx, row in final_gdf.iterrows():
+        if row.geometry is not None:
+            route_points.append(
+                RoutePoint(
+                    name=row['NAME'],
+                    type=row['TYPE'],
+                    latitude=row.geometry.y,
+                    longitude=row.geometry.x
+                )
+            )
+        else:
+            print(f"Skipping row {idx} due to None geometry: {row}")
+
+    # Debugging statement to check the created route points
+    print(f"Route points: {route_points}")
+
+    
     final_route_geometries = metadata['final_route_geometry']
     route_segments = []
     for i, geom in enumerate(final_route_geometries):
