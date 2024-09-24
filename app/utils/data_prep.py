@@ -9,7 +9,7 @@ from app.services import get_geojson
 def generate_search_buffer(activity_line: GeoDataFrame, search_radius: int):
     """
     """
-    activity_line = activity_line.copy().to_crs(epsg=3414)
+    activity_line = activity_line.to_crs(epsg=3414)
     search_buffer = activity_line.buffer(search_radius, resolution = 16)
     search_gdf = gpd.GeoDataFrame(geometry=search_buffer, crs='EPSG:3414')
 
@@ -51,20 +51,13 @@ def find_clusters(item_gdf: GeoDataFrame, num_clusters: int):
         item_gdf['cluster'] = 1 # set all items into same cluster
         return item_gdf, item_gdf
 
-    # Create a copy and transform crs
-    #item_gdf = item_gdf.copy().to_crs(epsg=3414)
-
     # Perform K means on coordinates
-    print(item_gdf)
     coords = item_gdf.geometry.apply(lambda geom: [geom.x, geom.y]).tolist()
-    print(coords)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10).fit(coords)
     item_gdf['cluster'] = kmeans.labels_
 
     # Randomly select one POI from each cluster
-    selected_items = item_gdf.groupby('cluster').apply(lambda x: x.sample(1)).reset_index(drop=True)
-    print(selected_items)
-    selected_items = selected_items.to_crs(epsg=4326)
+    selected_items = item_gdf.groupby('cluster').apply(lambda x: x.sample(1)).reset_index(drop=True).to_crs(epsg=4326)
     return selected_items
 
 
@@ -84,15 +77,10 @@ def concat_poi_gdf(file_keys: list, request: Request):
     gdfs = []
     for key in file_keys:
         try:
-            gdf = gpd.read_file(get_geojson(key, request))
-            gdf = gdf.to_crs('EPSG:3414')  # Reproject to EPSG:3414
-            gdfs.append(gdf)
+            gdfs.append(gpd.read_file(get_geojson(key, request)).to_crs('EPSG:3414'))
         except:
             print(f"Warning: {key} not found in memory.")
             pass
-
-    for item in gdfs:
-        print(type(item))
 
     concatenated_gdf = pd.concat(gdfs, ignore_index=True)
     concatenated_gdf.crs = 'EPSG:3414'

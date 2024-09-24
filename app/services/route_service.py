@@ -1,19 +1,17 @@
-from fastapi import Request
 import geopandas as gpd
-from shapely.geometry import Point, LineString
-# from app.utils.data_prep import (
-#     search_nearby_items,
-#     find_clusters,
-#     generate_avoidance_zones,
-#     concat_poi_gdf
-# )
-from app.utils.route_generation import nearest_neighbor_route, generate_full_route
-#     generate_full_route,
-#     check_intersections
-# )
-from app.models.schemas import UserData, RoutePoint, RouteSegment, RouteResponse
-from app.utils.data_prep import concat_poi_gdf, generate_search_buffer, search_nearby_items, find_clusters
 import time
+from fastapi import Request
+from shapely.geometry import Point, LineString
+from app.utils import (
+    generate_search_buffer,
+    search_nearby_items,
+    find_clusters,
+    concat_poi_gdf,
+    nearest_neighbor_route,
+    generate_full_route
+)
+from app.models.schemas import UserData, RoutePoint, RouteSegment, RouteResponse
+
 
 def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     """
@@ -24,12 +22,10 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     Returns:
 
     """
-    MAX_TIME = 60
-
+    
     # Convert user and end locations to GeoDataFrames
     start_time = time.time()
-    user_location = Point(tuple(user_data['user_location']))  # Reverse to (lon, lat)
-    end_location = Point(tuple(user_data['end_location']))
+    user_location, end_location = Point(tuple(user_data['user_location'])),  Point(tuple(user_data['end_location']))
     user_gdf = gpd.GeoDataFrame(
         [{'geometry': user_location, 'NAME': 'User', 'TYPE': 'User'}],
         crs="EPSG:4326"
@@ -48,8 +44,6 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
 
     search_gdf_sg = generate_search_buffer(activity_line, user_data['search_radius'])
 
-    print("we reach line 47")
-
     # Prepare the keys to pull from memory and concat together
     input_data_keys = {
         'poi_gdf': [f"{poi_type}.geojson" for poi_type in user_data['poi_types']] if user_data['poi_types'] else [],
@@ -65,12 +59,12 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     nearby_amenity = search_nearby_items(search_gdf_sg, amenity_gdf, False) if amenity_gdf is not None else None
     nearby_avoidance_buffer = search_nearby_items(search_gdf_sg, avoidance_gdf, True) if avoidance_gdf is not None else None
 
-    print(nearby_pois, nearby_amenity, nearby_avoidance_buffer)
+    print(nearby_pois)
 
     final_gdf = None
     while True:
         print("Started route generation attempt")
-        if time.time() - start_time > MAX_TIME:
+        if time.time() - start_time > 60:
             print("Maximum attempts reached. Unable to find a valid route that satisfies the requirements.")
             return None, None, None, None, None, None
 
@@ -82,7 +76,6 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
         route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois, end_gdf)
 
         print(route_points_gdf)
-        print(route_points_gdf.columns)
 
         final_gdf, metadata = generate_full_route(user_data, route_points_gdf, nearby_pois, nearby_amenity, nearby_avoidance_buffer)
         if final_gdf is not None:
@@ -91,21 +84,10 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     print(final_gdf)
     print(metadata)
 
-
-
     # Prepare the response
     if final_gdf is None:
-        raise Exception("No valid route found within the given constraints.")
+        return None, None, None, None, None, None
 
-    # route_points = [
-    #     RoutePoint(
-    #         name=row['NAME'],
-    #         type=row['TYPE'],
-    #         latitude=row.geometry.y,
-    #         longitude=row.geometry.x
-    #     ) for idx, row in final_gdf.iterrows()
-    # ]
-    print("########################Creating Route Point######################")
     route_points = []
 
     for idx, row in final_gdf.iterrows():

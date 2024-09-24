@@ -5,7 +5,7 @@ from app.models.schemas import UserData
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from app.utils import get_route_OneMapAPI
+from app.utils.onemap import get_route_OneMapAPI, regenerate_api_key
 
 
 load_dotenv(".env.production")
@@ -54,7 +54,7 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
 
         # Attempt to finish the walking trail and backtrack if needed
         if metadata["total_distance"] + latest_distance >= max_route_length:
-            route_geometry, latest_time, latest_distance = get_route_OneMapAPI(current_point, next_point)
+            route_geometry, latest_time, latest_distance = get_route_OneMapAPI(current_point, end_point)
 
             if latest_distance + metadata["total_distance"] < max_route_length:
                 metadata = update_metadata(metadata, end_point_gdf, route_geometry, latest_time, latest_distance)
@@ -82,7 +82,7 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
         print("Checking for barrier free")
         # Check whether it hits avoidance buffers and replace the destination if needed
         if user_data['barrier_free'] and avoidance_check_attempts <= 5 and i + 1 != len(route_points_gdf) - 1:
-            if intersects_barriers(route_geometry, avoidance_buffer_gdf):
+            if route_geometry.intersects(avoidance_buffer_gdf.unary_union):
                route_points_gdf.iloc[[i+1]] = replace_destination(current_point_gdf, next_point_gdf, nearby_poi_gdf, nearby_amenities_gdf)[0]
                avoidance_check_attempts += 1
                continue
@@ -96,7 +96,7 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
         i += 1
 
         print(metadata['final_points_gdf_list'])
-        final_gdf = gpd.GeoDataFrame(pd.concat(metadata['final_points_gdf_list'], ignore_index=True))
+        final_gdf = gpd.GeoDataFrame(pd.concat(metadata['final_points_gdf_list'], ignore_index=True)).to_crs("EPSG:4326")
     
     return final_gdf, metadata
 
@@ -146,27 +146,6 @@ def nearest_neighbor_route(start_gdf: GeoDataFrame, points_gdf: GeoDataFrame, en
 
     return route_points_gdf
 
-
-
-
-
-
-def intersects_barriers(route_geometry, avoidance_buffer_gdf):
-    """ Checks if the current route intersects the avoidance buffer.
-
-    Args:
-    - route_geometry (LineString): The route between two points
-    - avoidance_buffer_gdf (GeoDataFrame): The GDF containing the avoidance buffers of non barrier-free routes
-    
-    Returns:
-    - (bool): Boolean if route intersects buffer
-    """
-    if route_geometry.intersects(avoidance_buffer_gdf.unary_union):
-        print("Route intersects barriers")
-        return True
-    return False
-
-
 def get_last_point(metadata):
     last_item = metadata['final_points_gdf_list'][-1]
     
@@ -197,8 +176,6 @@ def handle_backtrack(metadata: dict, end_point_gdf: GeoDataFrame, max_route_leng
         metadata["final_route_geometry"].pop()
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()
-
-        print("Line 246")
 
         last_point = get_last_point(metadata)
         end_point = end_point_gdf.geometry.iloc[0]
