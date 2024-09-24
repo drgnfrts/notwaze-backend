@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: 533267362844.dkr.ecr.us-east-1.amazonaws.com/walk-eaze-backend:1.0.3
+    image: 533267362844.dkr.ecr.us-east-1.amazonaws.com/walk-eaze-backend:1.1.1
     ports:
       - "80:8000"
     volumes:
@@ -19,6 +19,6 @@ services:
         "--port",
         "8000",
       ]
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env.production

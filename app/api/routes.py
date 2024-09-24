@@ -30,7 +30,7 @@ async def get_geojson_file(file_key: str, request: Request):
 async def generate_route_endpoint(request: Request, user_data: dict):
     try:
         # Access the GeoJSON files and user data from app state
-        
+        print(user_data)
         request.app.state.user_data = {
             "user_location": user_data["user_location"],
             "end_location": user_data["end_location"],
@@ -38,13 +38,15 @@ async def generate_route_endpoint(request: Request, user_data: dict):
             "num_POIs": 5,
             "max_route_length": user_data["max_route_length"],
             # below are placeholder values
-            "poi_types": ['monument', 'historicSite', 'park', 'museum'],
+            "poi_types": user_data['poi_types'],
             "amenity": user_data['amenity'], #True
             "barrier_free": user_data['barrier_free'] #True
         }
 
         # Pass necessary data to the service function
+        print(request.app.state.user_data)
         route_response = generate_route(request, request.app.state.user_data)
+
         return route_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

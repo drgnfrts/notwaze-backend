@@ -1,108 +1,14 @@
 import geopandas as gpd
 from geopandas import GeoDataFrame
 from shapely.geometry import LineString, Point
-from app.models.schemas import RoutePoint, UserData
-from typing import List, Tuple
-import requests
-import polyline
+from app.models.schemas import UserData
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-import os
+from app.utils import get_route_OneMapAPI
+
 
 load_dotenv(".env.production")
-
-def nearest_neighbor_route(start_gdf: GeoDataFrame, points_gdf: GeoDataFrame, end_gdf: GeoDataFrame) -> GeoDataFrame:
-    """
-    Generates a route by visiting the nearest unvisited point from the current point, starting from the start point(s).
-    Uses Euclidean distance in a projected coordinate system (EPSG:3414) for distance calculations.
-
-    Parameters:
-    - start_gdf (GeoDataFrame): GeoDataFrame containing the starting point(s).
-    - points_gdf (GeoDataFrame): GeoDataFrame containing the points to visit.
-
-    Returns:
-    - route_points_gdf (GeoDataFrame): GeoDataFrame of points in the order they are visited in the route.
-    """
-
-    # Transform to projected CRS for accurate distance calculations
-    projected_crs = 'EPSG:3414'
-    start_gdf_proj = start_gdf.copy().to_crs(projected_crs)
-    points_gdf_proj = points_gdf.copy().to_crs(projected_crs)
-    end_gdf_proj = end_gdf.copy().to_crs(projected_crs)
-
-    # Combine columns from both GeoDataFrames
-    all_columns = start_gdf_proj.columns.union(points_gdf_proj.columns)
-
-    # Reindex both GeoDataFrames to have the same columns
-    route_points_gdf = start_gdf_proj.reindex(columns=all_columns, fill_value=np.nan)
-    remaining_points = points_gdf_proj.reindex(columns=all_columns, fill_value=np.nan)
-
-    while not remaining_points.empty:
-        # Nearest neighbours greedy alogirthm
-        # Get the last point in the current route
-        last_point = route_points_gdf.iloc[-1].geometry
-
-        # Extract coordinates and calculate distances
-        remaining_points['distance'] = remaining_points.geometry.apply(lambda x: last_point.distance(x))
-
-        # Take nearest point and append to route, then drop from remaining points
-        nearest_idx = remaining_points['distance'].idxmin()
-        nearest = remaining_points.loc[[nearest_idx]]
-        route_points_gdf = pd.concat([route_points_gdf, nearest], ignore_index=True)
-        remaining_points = remaining_points.drop(nearest_idx)
-
-    # Transform back to WGS84 (EPSG:4326) for mapping
-    route_points_gdf = pd.concat([route_points_gdf, end_gdf_proj], ignore_index=True)
-    route_points_gdf = route_points_gdf.to_crs(epsg=4326)
-
-    return route_points_gdf
-
-
-def get_route_OneMapAPI(start, end):
-    """ Calls the OneMap API to get the route between two points.
-
-    Args:
-     - start (): Starting point of the route
-     - end (): Ending point of the route
-    
-    Returns:
-     - flipped_route_line (LineString): Route generated with coordinates in long/lat format
-     - time (str): Time estimated by OneMap API to complete the route
-     - distance (str): Distance of route generated
-
-    """
-    load_dotenv()
-    print("point coordinates as follows")
-    print(start.y, start.x, end.y, end.x)
-
-    # Pass start and end coordinates to API
-    url = f"https://www.onemap.gov.sg/api/public/routingsvc/route?start={start.y}%2C{start.x}&end={end.y}%2C{end.x}&routeType=walk"
-    headers = {"Authorization": os.getenv("ONEMAP_API_KEY")}
-    response = requests.request("GET", url, headers=headers)
-
-    if response.status_code != 200:
-        print(f"Error: HTTP status code {response.status_code}")
-        print("Unexpected Error, Check Validity of API KEY")
-        return None, None, None
-    
-    # Extract route geometry and metadata
-    data = response.json()
-    route_geometry = data['route_geometry']
-    time = data['route_summary']['total_time']
-    distance = data['route_summary']['total_distance']
-
-    # Converting route_geometry into a LineString feature
-    coordinates = polyline.decode(route_geometry)
-    route_line = LineString(coordinates)
-
-    # Change back from lat/long format to the long, lat 
-    flipped_coordinates = [(y, x) for x, y in route_line.coords]
-    flipped_route_line = LineString(flipped_coordinates)
-    print("Called OneMap API")
-    print(time, distance)
-    return flipped_route_line, time, distance
-
 
 def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nearby_poi_gdf: GeoDataFrame, nearby_amenities_gdf: GeoDataFrame, avoidance_buffer_gdf: GeoDataFrame):
     # Function code as provided
@@ -193,6 +99,55 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
         final_gdf = gpd.GeoDataFrame(pd.concat(metadata['final_points_gdf_list'], ignore_index=True))
     
     return final_gdf, metadata
+
+def nearest_neighbor_route(start_gdf: GeoDataFrame, points_gdf: GeoDataFrame, end_gdf: GeoDataFrame) -> GeoDataFrame:
+    """
+    Generates a route by visiting the nearest unvisited point from the current point, starting from the start point(s).
+    Uses Euclidean distance in a projected coordinate system (EPSG:3414) for distance calculations.
+
+    Parameters:
+    - start_gdf (GeoDataFrame): GeoDataFrame containing the starting point(s).
+    - points_gdf (GeoDataFrame): GeoDataFrame containing the points to visit.
+
+    Returns:
+    - route_points_gdf (GeoDataFrame): GeoDataFrame of points in the order they are visited in the route.
+    """
+
+    # Transform to projected CRS for accurate distance calculations
+    projected_crs = 'EPSG:3414'
+    start_gdf_proj = start_gdf.copy().to_crs(projected_crs)
+    points_gdf_proj = points_gdf.copy().to_crs(projected_crs)
+    end_gdf_proj = end_gdf.copy().to_crs(projected_crs)
+
+    # Combine columns from both GeoDataFrames
+    all_columns = start_gdf_proj.columns.union(points_gdf_proj.columns)
+
+    # Reindex both GeoDataFrames to have the same columns
+    route_points_gdf = start_gdf_proj.reindex(columns=all_columns, fill_value=np.nan)
+    remaining_points = points_gdf_proj.reindex(columns=all_columns, fill_value=np.nan)
+
+    while not remaining_points.empty:
+        # Nearest neighbours greedy alogirthm
+        # Get the last point in the current route
+        last_point = route_points_gdf.iloc[-1].geometry
+
+        # Extract coordinates and calculate distances
+        remaining_points['distance'] = remaining_points.geometry.apply(lambda x: last_point.distance(x))
+
+        # Take nearest point and append to route, then drop from remaining points
+        nearest_idx = remaining_points['distance'].idxmin()
+        nearest = remaining_points.loc[[nearest_idx]]
+        route_points_gdf = pd.concat([route_points_gdf, nearest], ignore_index=True)
+        remaining_points = remaining_points.drop(nearest_idx)
+
+    # Transform back to WGS84 (EPSG:4326) for mapping
+    route_points_gdf = pd.concat([route_points_gdf, end_gdf_proj], ignore_index=True)
+    route_points_gdf = route_points_gdf.to_crs(epsg=4326)
+
+    return route_points_gdf
+
+
+
 
 
 
