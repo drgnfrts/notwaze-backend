@@ -34,6 +34,8 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
     }
 
     last_amenity_idx, avoidance_check_attempts = -1, 0
+    print("original route points gdf")
+    print(route_points_gdf)
 
     end_point_gdf = metadata["route_points_gdf"].iloc[[-1]]
     end_point = end_point_gdf.geometry.iloc[0]
@@ -58,14 +60,45 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
             route_geometry, latest_time, latest_distance = get_route_OneMapAPI(current_point, end_point)
 
             if latest_distance + metadata["total_distance"] < max_route_length:
+                print("final points gdf")
+                print(metadata['final_points_gdf_list'])
+                print("final geoms")
+                print(metadata["final_route_geometry"])
+                print("final gdf")
+                print(metadata["route_points_gdf"] )
+                print("total time")
+                print(metadata["total_time"])
+                print("total distance")
+                print(metadata["total_distance"])
                 metadata = update_metadata(i, metadata, end_point_gdf, route_geometry, latest_time, latest_distance)
+                print("--------------------------------------------------------------------------------------")
+                print("final points gdf")
+                print(metadata['final_points_gdf_list'])
+                print("final geoms")
+                print(metadata["final_route_geometry"])
+                print("final gdf")
+                print(metadata["route_points_gdf"] )
+                print("total time")
+                print(metadata["total_time"])
+                print("total distance")
+                print(metadata["total_distance"])
+                print("--------------------------------------------------------------------------------------")
+                final_gdf = gpd.GeoDataFrame(pd.concat(metadata['final_points_gdf_list'], ignore_index=True)).to_crs("EPSG:4326")
+                print("--------- FINAL GDF --------")
+                print(final_gdf)
                 break
 
             metadata = handle_backtrack(i, metadata, end_point_gdf, max_route_length)
+            print("returned to main generate route function")
+            final_gdf = gpd.GeoDataFrame(pd.concat(metadata['final_points_gdf_list'], ignore_index=True)).to_crs("EPSG:4326")
+            print("--------- FINAL GDF --------")
+            print(final_gdf)
+            return final_gdf, metadata
             
             if metadata['total_distance'] == 0:
                 return None, None
             
+            print(route_points_gdf)
             # reassign current point and next points to the new metadata values
             current_point_gdf = metadata["route_points_gdf"].iloc[[i]]
             next_point_gdf = metadata["route_points_gdf"].iloc[[i + 1]]
@@ -82,8 +115,27 @@ def generate_full_route(user_data: UserData, route_points_gdf: GeoDataFrame, nea
 
             if distance_to_amenity + distance_from_amenity + metadata['total_distance'] < max_route_length:
                 print("adding amenity")
-                metadata = update_metadata(i, metadata, inserted_amenity, route_geometry_to_amenity, time_to_amenity, distance_to_amenity)
-                metadata = update_metadata(i, metadata, inserted_amenity, route_geometry_after_amenity, time_after_amenity, distance_from_amenity)
+                print(i)
+                print(inserted_amenity)
+                print(route_geometry_to_amenity)
+                print(time_to_amenity)
+                print(distance_to_amenity)
+
+                amenity_gdf = gpd.GeoDataFrame({
+                    "DESCRIPTION": None,  # Assuming DESCRIPTION is NaN or not provided
+                    "NAME": [inserted_amenity["NAME"]],
+                    "PHOTOURL": None,  # Assuming PHOTOURL is NaN or not provided
+                    "TYPE": [inserted_amenity["TYPE"]],
+                    "cluster": None,  # Assuming cluster is NaN or not provided
+                    "geometry": [inserted_amenity["geometry"]],
+                    "distance": [inserted_amenity["distance"]]
+                }, geometry="geometry")
+
+                print("amenity gdf ---------")
+                print(amenity_gdf)
+                print("adding amenity_gdf into metadata")
+                metadata = update_metadata(i, metadata, amenity_gdf, route_geometry_to_amenity, time_to_amenity, distance_to_amenity)
+                metadata = update_metadata(i, metadata, next_point_gdf, route_geometry_after_amenity, time_after_amenity, distance_from_amenity)
                 avoidance_check_attempts = 0
                 i += 1
                 continue
@@ -180,14 +232,39 @@ def get_last_point(metadata):
 
 def handle_backtrack(i: int, metadata: dict, end_point_gdf: GeoDataFrame, max_route_length: int):
 
-    while metadata["total_distance"] >= max_route_length and len(metadata['final_points_gdf_list']) > 1:
+    while len(metadata['final_points_gdf_list']) > 1:
+        i -= 1
         print("Backtracking by 1. Popping the last point:")
         print(metadata['final_points_gdf_list'][-1])
+        print("check -----------")
+        print("existing points gdf")
+        print(metadata['final_points_gdf_list'])
+        print("existing geoms")
+        print(metadata["final_route_geometry"])
+        print("existing gdf")
+        print(metadata["route_points_gdf"] )
+        print("existing time")
+        print(metadata["total_time"])
+        print("existing distance")
+        print(metadata["total_distance"])
+        print("check -----------")
         metadata['final_points_gdf_list'].pop()
         metadata["final_route_geometry"].pop()
-        metadata["route_points_gdf"].drop(metadata["route_points_gdf"].index[i:]) # remove the points from i onwards
+        metadata["route_points_gdf"] = metadata["route_points_gdf"].drop(metadata["route_points_gdf"].index[i:] ,inplace=True) # remove the points from i onwards
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()
+        
+        print("final points gdf")
+        print(metadata['final_points_gdf_list'])
+        print("final geoms")
+        print(metadata["final_route_geometry"])
+        print("final gdf")
+        print(metadata["route_points_gdf"] )
+        print("total time")
+        print(metadata["total_time"])
+        print("total distance")
+        print(metadata["total_distance"])
+
 
         last_point = get_last_point(metadata)
         end_point = end_point_gdf.geometry.iloc[0]
@@ -198,12 +275,23 @@ def handle_backtrack(i: int, metadata: dict, end_point_gdf: GeoDataFrame, max_ro
         print(end_point)
 
         route_geometry_to_end, time_to_end, distance_to_end = get_route_OneMapAPI(last_point, end_point)
+        print(f"i={i}")
+        print(metadata['total_distance'])
+        print(distance_to_end)
+        print(max_route_length)
         if metadata["total_distance"] + distance_to_end < max_route_length:
+            print("entering if")
             metadata = update_metadata(i, metadata, end_point_gdf, route_geometry_to_end, time_to_end, distance_to_end)
+            print("--------------------------------------------------------------------------------------")
+            print(metadata)
+            print("--------------------------------------------------------------------------------------")
             return metadata
         
         # move to previous point
-        i -= 1
+        print("reached here")
+        print(metadata)
+        print(len(metadata['final_points_gdf_list']))
+        
 
     return metadata
         
@@ -233,14 +321,27 @@ def replace_destination(current_point_gdf, next_point_gdf, nearby_poi, nearby_am
 
     return new_next_point_gdf
 
-def update_metadata(i: int, metadata: dict, point_gdf: GeoDataFrame, route_geometry: LineString, latest_time, latest_distance):
-    print(f"Updated Metadata with {point_gdf["NAME"].iloc[0]}")
+def update_metadata(i: int, metadata: dict, point_gdf, route_geometry: LineString, latest_time, latest_distance):
+    try:
+        print(f"Updated Metadata with {point_gdf['NAME'].iloc[0]}")
+    except:
+        pass
+    print(f"i={i}")
+    print(point_gdf)
+    print("======")
+    print(metadata)
+    print("========")
     
-    metadata["route_points_gdf"].loc[i] = point_gdf.iloc[0]
+    # metadata["route_points_gdf"].loc[i] = point_gdf.iloc[0]
+    # print("success")
     metadata['final_points_gdf_list'].append(point_gdf)
+    print("success")
     metadata["final_route_geometry"].append(route_geometry)
+    print("success")
     metadata["route_times"].append(latest_time)
+    print("success")
     metadata["route_distances"].append(latest_distance)
+    print("success")
     metadata["total_time"] += latest_time
     metadata["total_distance"] += latest_distance
 

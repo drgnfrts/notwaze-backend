@@ -49,7 +49,7 @@ def find_clusters(item_gdf: GeoDataFrame, num_clusters: int):
     """
     if len(item_gdf) <= num_clusters:
         item_gdf['cluster'] = 1 # set all items into same cluster
-        return item_gdf, item_gdf
+        return item_gdf
 
     # Perform K means on coordinates
     coords = item_gdf.geometry.apply(lambda geom: [geom.x, geom.y]).tolist()

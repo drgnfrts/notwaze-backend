@@ -55,6 +55,7 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     poi_gdf, amenity_gdf, avoidance_gdf = (
         concat_poi_gdf(keys, request) for keys in input_data_keys.values())
     
+
     nearby_pois = search_nearby_items(search_gdf_sg, poi_gdf, False) if poi_gdf is not None else None
     nearby_amenity = search_nearby_items(search_gdf_sg, amenity_gdf, False) if amenity_gdf is not None else None
     nearby_avoidance_buffer = search_nearby_items(search_gdf_sg, avoidance_gdf, True) if avoidance_gdf is not None else None
@@ -72,15 +73,24 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
         # Find clusters and select POIs
         selected_pois = find_clusters(nearby_pois, user_data['num_POIs'])
         # Generate route points
-        print(user_gdf, selected_pois, end_gdf)
+        print("starting knn")
+        print("--------- user gdf")
+        print(user_gdf)
+        print("--------- selected poi")
+        print(selected_pois)
+        print("--------- end gdf")
+        print(end_gdf)
+        print("---------")
         route_points_gdf = nearest_neighbor_route(user_gdf, selected_pois, end_gdf)
 
+        print('reorganised knn')
         print(route_points_gdf)
 
         final_gdf, metadata = generate_full_route(user_data, route_points_gdf, nearby_pois, nearby_amenity, nearby_avoidance_buffer)
         if final_gdf is not None:
             break
     
+    print("returned to main backend endpoint")
     print(final_gdf)
     print(metadata)
 
