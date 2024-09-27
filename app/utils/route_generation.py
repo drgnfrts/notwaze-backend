@@ -250,6 +250,7 @@ def handle_backtrack(i: int, metadata: dict, end_point_gdf: GeoDataFrame, max_ro
         print("check -----------")
         metadata['final_points_gdf_list'].pop()
         metadata["final_route_geometry"].pop()
+        print(metadata["route_points_gdf"])
         metadata["route_points_gdf"] = metadata["route_points_gdf"].drop(metadata["route_points_gdf"].index[i:] ,inplace=True) # remove the points from i onwards
         metadata["total_time"] -= metadata["route_times"].pop()
         metadata["total_distance"] -= metadata["route_distances"].pop()

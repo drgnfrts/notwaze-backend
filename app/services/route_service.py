@@ -11,6 +11,7 @@ from app.utils import (
     generate_full_route
 )
 from app.models.schemas import UserData, RoutePoint, RouteSegment, RouteResponse
+from app.utils.onemap import reverse_geocode
 
 
 def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
@@ -26,12 +27,13 @@ def generate_route(request: Request, user_data: UserData):  # -> RouteRequest:
     # Convert user and end locations to GeoDataFrames
     start_time = time.time()
     user_location, end_location = Point(tuple(user_data['user_location'])),  Point(tuple(user_data['end_location']))
+    print(reverse_geocode(user_location), reverse_geocode(end_location))
     user_gdf = gpd.GeoDataFrame(
-        [{'geometry': user_location, 'NAME': 'User', 'TYPE': 'User'}],
+        [{'geometry': user_location, 'NAME': reverse_geocode(user_location), 'TYPE': 'Start'}],
         crs="EPSG:4326"
     )
     end_gdf = gpd.GeoDataFrame(
-        [{'geometry': end_location, 'NAME': 'End', 'TYPE': 'End'}],
+        [{'geometry': end_location, 'NAME': reverse_geocode(end_location), 'TYPE': 'End'}],
         crs="EPSG:4326"
     )
 

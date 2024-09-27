@@ -93,6 +93,16 @@ def get_route_OneMapAPI(start, end):
     print(time, distance)
     return flipped_route_line, time, distance
 
+def reverse_geocode(point):
+    load_dotenv()
+    url = f"https://www.onemap.gov.sg/api/public/revgeocode?location={point.y},{point.x}"
+    headers = {"Authorization": os.getenv("ONEMAP_API_KEY")}
+    response = requests.request("GET", url, headers=headers)
+    if response.status_code != 200:
+        print(f"Error: HTTP status code {response.status_code}")
+        print("Unexpected Error, check again")
+    return response.json()["GeocodeInfo"][0]["BUILDINGNAME"]
+
 
 
     

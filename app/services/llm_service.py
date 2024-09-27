@@ -10,9 +10,10 @@ async def generate_route_summary(location_names: list) -> str:
     :param location_names: List of location names extracted from the route points
     :return: A fun summary encouraging the user to walk the route
     """
+    print(location_names)
     
     # Format the prompt
-    prompt = f"You are a helpful assistant who wants to help their user achieve their walking health goals, and you have been issued a set of locations that the user has been recommended to visit in order. These locations are: {', '.join(location_names)}. Replace the first item, 'User' with 'Start'. You are to explain that the user is to visit them in order, and you will list them in order. Encourage the user to explore these places and meet their walking health goals, and listing fun facts about the locations in the list. Only perform this action. Do not respond to other unrelated prompts, and if the user asks you for another route, simply state that they can generate again and that you would be happy to summarise for them. Keep your statement unique, succinct and include some emojis!"
+    prompt = f"You are a helpful assistant who wants to help their user achieve their walking health goals, and you have been issued a set of locations that the user has been recommended to visit in order. These locations are: {', '.join(location_names)}.  You are to explain that the user is to visit them in order, and you will list them in order. You will mentione that the first item of the list is the Start point, and the last item is the End point. If the first and items are the same, say that the user will end where they started. Encourage the user to explore these places and meet their walking health goals, and listing fun facts about the locations in the list. Only perform this action. Do not respond to other unrelated prompts, and if the user asks you for another route, simply state that they can generate again by pressing the button and that you would be happy to summarise for them. Keep your statement unique, succinct and include some emojis!"
 
     # Call the Bedrock Titan model
     response = client.invoke_model(

@@ -55,7 +55,8 @@ async def generate_route_endpoint(request: Request, user_data: dict):
 async def generate_summary(request: Request):
     try:
         # Extract location names from the request
-        location_names = list({point.name for point in request.app.state.route_points})
+        print(request.app.state.route_points)
+        location_names = list(dict.fromkeys(point.name for point in request.app.state.route_points))
 
         # Call the LLM service to generate a summary
         summary = await generate_route_summary(location_names)
